@@ -1,5 +1,7 @@
 # IRONLOG v2 - Mining ERP Platform
 
+[![CI Smoke](https://github.com/YOUR_ORG/YOUR_REPO/actions/workflows/ci-smoke.yml/badge.svg?branch=main)](https://github.com/YOUR_ORG/YOUR_REPO/actions/workflows/ci-smoke.yml)
+
 IRONLOG is a full-site ERP platform designed for mining operations with integrated modules for:
 
 - Plant: maintenance, service intervals, fuel usage, availability/utilization, MTBF, MTTR, auto work orders
