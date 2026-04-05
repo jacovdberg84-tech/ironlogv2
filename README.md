@@ -494,6 +494,12 @@ Use Task Scheduler to run daily at 06:00:
 
 This creates one backup per day and applies retention cleanup automatically.
 
+Quick schedule change command:
+
+- `npm run backup:set-time -- -Time 07:30`
+
+This updates the `IRONLOG Daily DB Backup` task to run daily at the specified `HH:mm` time.
+
 ## Smoke Test Script
 
 Use the startup smoke test to validate API readiness after deploys or restarts.
@@ -540,5 +546,6 @@ Example:
 4. Advanced analytics: MTBF/MTTR trends, predictive failures, cost anomalies
 5. RBAC, audit logging, and compliance hardening
 6. Production deployment automation to Hetzner + Cloudflare + Tailscale admin plane
-#   i r o n l o g v 2  
+#   i r o n l o g v 2 
+ 
  
