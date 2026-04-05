@@ -512,6 +512,24 @@ Example:
 
 - `powershell -ExecutionPolicy Bypass -File ./scripts/smoke-test.ps1 -ApiBase http://localhost:4000`
 
+## Workflow Smoke Test Script
+
+Use the workflow smoke test to validate checklist/comment/dependency board flows after deploys.
+
+- Command: `npm run smoke:workflow`
+- Checks:
+   - `GET /health/startup`
+   - `POST /api/work-orders`
+   - `POST /api/work-orders/:id/checklist`
+   - `PATCH /api/work-orders/:id/checklist/:itemId`
+   - `POST /api/work-orders/:id/comments`
+   - `POST /api/work-orders/:id/dependencies`
+   - `GET /api/work-orders/workflow/board`
+
+Example:
+
+- `powershell -ExecutionPolicy Bypass -File ./scripts/workflow-smoke-test.ps1 -ApiBase http://localhost:4000 -SiteCode SITE-A`
+
 ## Roadmap
 
 1. Database schema and migrations for production entities
