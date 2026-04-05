@@ -26,3 +26,4 @@ Thumbs.db
 
 # Runtime artifacts
 apps/api/reports/exports/
+backups/
