@@ -538,6 +538,24 @@ Example:
 
 - `powershell -ExecutionPolicy Bypass -File ./scripts/workflow-smoke-test.ps1 -ApiBase http://localhost:4000 -SiteCode SITE-A`
 
+## Production Guardrails
+
+Repository guardrail assets now included:
+
+- Deploy workflow: `.github/workflows/deploy.yml`
+   - manual dispatch with `staging` or `production`
+   - preflight build gate and deployment artifact generation
+   - environment-gated deployment hook via `DEPLOY_WEBHOOK_URL`
+- Code ownership: `.github/CODEOWNERS`
+- Pull request quality gate: `.github/pull_request_template.md`
+- Operational checklist: `docs/release-hardening-checklist.md`
+
+To complete protection in GitHub UI:
+
+1. Enable branch protection on `main` and require `CI Smoke / smoke`.
+2. Create GitHub environments `staging` and `production` with required reviewers.
+3. Add environment secrets `DEPLOY_WEBHOOK_URL` and `DEPLOY_WEBHOOK_TOKEN`.
+
 ## Roadmap
 
 1. Database schema and migrations for production entities

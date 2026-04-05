@@ -1,0 +1,9 @@
+# Default owners for all files
+* @jacovdberg84-tech
+
+# Critical automation and infrastructure
+.github/workflows/ @jacovdberg84-tech
+scripts/ @jacovdberg84-tech
+infra/ @jacovdberg84-tech
+apps/api/ @jacovdberg84-tech
+apps/web/ @jacovdberg84-tech
