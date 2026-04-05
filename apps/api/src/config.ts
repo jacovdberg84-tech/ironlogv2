@@ -36,7 +36,15 @@ export const config = {
     .map((item) => item.trim())
     .filter((item) => item.length > 0),
   syntheticLoadDefaultEventsPerDayPerMachine: Number(process.env.SYNTHETIC_LOAD_DEFAULT_EVENTS_PER_DAY_PER_MACHINE ?? 3),
-  syntheticLoadDefaultIncludeCriticalSpike: process.env.SYNTHETIC_LOAD_DEFAULT_INCLUDE_CRITICAL_SPIKE !== "false"
+  syntheticLoadDefaultIncludeCriticalSpike: process.env.SYNTHETIC_LOAD_DEFAULT_INCLUDE_CRITICAL_SPIKE !== "false",
+  workOrderSlaCron: process.env.WORK_ORDER_SLA_CRON ?? "*/20 * * * *",
+  workOrderEscalationRetryCron: process.env.WORK_ORDER_ESCALATION_RETRY_CRON ?? "*/5 * * * *",
+  executiveShiftReportCron: process.env.EXECUTIVE_SHIFT_REPORT_CRON ?? "0 5 * * *",
+  executiveShiftReportDefaultSiteCode: process.env.EXECUTIVE_SHIFT_REPORT_DEFAULT_SITE_CODE ?? "SITE-A",
+  executiveShiftReportRecipients: (process.env.EXECUTIVE_SHIFT_REPORT_RECIPIENTS ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
 };
 
 export function validateSecurityConfig() {

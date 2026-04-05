@@ -3,6 +3,7 @@ export const PERMISSIONS = {
   plantRead: "plant.read",
   plantWrite: "plant.write",
   operationsRead: "operations.read",
+  operationsWrite: "operations.write",
   hseRead: "hse.read",
   hrRead: "hr.read",
   qualityRead: "quality.read",

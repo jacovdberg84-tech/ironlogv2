@@ -19,6 +19,7 @@ import { operationsRouter } from "./routes/operations.js";
 import { plantRouter } from "./routes/plant.js";
 import { qualityRouter } from "./routes/quality.js";
 import { sitesRouter } from "./routes/sites.js";
+import { workOrdersRouter } from "./routes/workOrders.js";
 import { realtimeHub } from "./services/realtimeHub.js";
 import { startSchedulers } from "./services/schedulerService.js";
 import { getStartupHealth } from "./services/startupHealthService.js";
@@ -88,6 +89,7 @@ app.use("/api/admin/import", requireAuth, requirePermission(PERMISSIONS.systemAd
 app.use("/api/admin/automation", requireAuth, requirePermission(PERMISSIONS.systemAdmin), adminAutomationRouter);
 app.use("/api/enterprise", requireAuth, enterpriseRouter);
 app.use("/api/sites", requireAuth, sitesRouter);
+app.use("/api/work-orders", requireAuth, workOrdersRouter);
 
 app.use("/api/plant", requireAuth, requirePermission(PERMISSIONS.plantRead), plantRouter);
 app.use("/api/operations", requireAuth, requirePermission(PERMISSIONS.operationsRead), operationsRouter);

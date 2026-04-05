@@ -11,6 +11,7 @@
     "dev:web": "npm --workspace apps/web run dev",
     "backup:db": "powershell -ExecutionPolicy Bypass -File ./scripts/db-backup.ps1",
     "restore:db": "powershell -ExecutionPolicy Bypass -File ./scripts/db-restore.ps1",
-    "smoke:test": "powershell -ExecutionPolicy Bypass -File ./scripts/smoke-test.ps1"
+    "smoke:test": "powershell -ExecutionPolicy Bypass -File ./scripts/smoke-test.ps1",
+    "smoke:workflow": "powershell -ExecutionPolicy Bypass -File ./scripts/workflow-smoke-test.ps1"
   }
 }

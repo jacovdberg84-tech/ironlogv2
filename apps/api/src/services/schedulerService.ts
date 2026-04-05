@@ -1,6 +1,11 @@
 import cron from "node-cron";
 import { config } from "../config.js";
 import { runSyntheticLoadJob } from "./enterpriseService.js";
+import {
+  evaluateWorkOrderSlaBreaches,
+  retryPendingEscalations,
+  runExecutiveShiftReportDispatch
+} from "./workOrderExecutionService.js";
 import { runWeeklyReportJob } from "./weeklyReportService.js";
 
 let schedulerStarted = false;
@@ -37,6 +42,39 @@ export function startSchedulers() {
         console.log("Scheduled synthetic site load completed");
       } catch (error) {
         console.error("Scheduled synthetic site load failed", error);
+      }
+    });
+  }
+
+  if (config.workOrderSlaCron && config.workOrderSlaCron.toLowerCase() !== "off") {
+    cron.schedule(config.workOrderSlaCron, async () => {
+      try {
+        await evaluateWorkOrderSlaBreaches({ triggeredBy: "scheduler" });
+        console.log("Scheduled work order SLA evaluation completed");
+      } catch (error) {
+        console.error("Scheduled work order SLA evaluation failed", error);
+      }
+    });
+  }
+
+  if (config.workOrderEscalationRetryCron && config.workOrderEscalationRetryCron.toLowerCase() !== "off") {
+    cron.schedule(config.workOrderEscalationRetryCron, async () => {
+      try {
+        await retryPendingEscalations(100);
+        console.log("Scheduled work order escalation retry completed");
+      } catch (error) {
+        console.error("Scheduled work order escalation retry failed", error);
+      }
+    });
+  }
+
+  if (config.executiveShiftReportCron && config.executiveShiftReportCron.toLowerCase() !== "off") {
+    cron.schedule(config.executiveShiftReportCron, async () => {
+      try {
+        await runExecutiveShiftReportDispatch("scheduler");
+        console.log("Scheduled executive shift report dispatch completed");
+      } catch (error) {
+        console.error("Scheduled executive shift report dispatch failed", error);
       }
     });
   }

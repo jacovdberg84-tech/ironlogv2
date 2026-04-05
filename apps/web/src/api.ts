@@ -570,3 +570,249 @@ export async function getOperatorEntries(limit = 20) {
   const response = await authFetch(`/plant/operator-entries?limit=${limit}`);
   return response.json();
 }
+
+export async function getWorkOrders(siteCode = "SITE-A", status?: "open" | "assigned" | "in_progress" | "blocked" | "pending_approval" | "approved" | "closed") {
+  const params = new URLSearchParams();
+  params.set("siteCode", siteCode);
+  params.set("limit", "120");
+  if (status) {
+    params.set("status", status);
+  }
+  const response = await authFetch(`/work-orders?${params.toString()}`);
+  return response.json();
+}
+
+export async function getWorkOrderWorkflowBoard(siteCode = "SITE-A", limit = 200) {
+  const response = await authFetch(`/work-orders/workflow/board?siteCode=${encodeURIComponent(siteCode)}&limit=${limit}`);
+  return response.json();
+}
+
+export async function createWorkOrder(payload: {
+  siteCode: string;
+  department: string;
+  machineCode?: string;
+  faultCode?: string;
+  title: string;
+  description?: string;
+  priority: "low" | "medium" | "high" | "critical";
+  assignedToName?: string;
+  dueAt?: string;
+  estimatedCost: number;
+  downtimeHours: number;
+}) {
+  const response = await authFetch("/work-orders", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+  return response.json();
+}
+
+export async function updateWorkOrder(id: number, payload: Partial<{
+  title: string;
+  description: string;
+  priority: "low" | "medium" | "high" | "critical";
+  status: "open" | "assigned" | "in_progress" | "blocked" | "pending_approval" | "approved" | "closed";
+  assignedToName: string;
+  dueAt: string | null;
+  actualCost: number;
+  downtimeHours: number;
+  evidenceNotes: string;
+}>) {
+  const response = await authFetch(`/work-orders/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+  return response.json();
+}
+
+export async function requestWorkOrderApproval(id: number, reason?: string) {
+  const response = await authFetch(`/work-orders/${id}/request-approval`, {
+    method: "POST",
+    body: JSON.stringify({ reason })
+  });
+  return response.json();
+}
+
+export async function approveWorkOrder(id: number, notes?: string) {
+  const response = await authFetch(`/work-orders/${id}/approve`, {
+    method: "POST",
+    body: JSON.stringify({ notes })
+  });
+  return response.json();
+}
+
+export async function closeWorkOrder(id: number, payload: {
+  actualCost?: number;
+  downtimeHours?: number;
+  evidenceNotes?: string;
+}) {
+  const response = await authFetch(`/work-orders/${id}/close`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+  return response.json();
+}
+
+export async function getWorkOrderShiftBoard(siteCode = "SITE-A") {
+  const response = await authFetch(`/work-orders/board/shift?siteCode=${encodeURIComponent(siteCode)}`);
+  return response.json();
+}
+
+export async function getWorkOrderAttribution(siteCode = "SITE-A", hours = 24 * 7) {
+  const response = await authFetch(`/work-orders/attribution/cost-downtime?siteCode=${encodeURIComponent(siteCode)}&hours=${hours}`);
+  return response.json();
+}
+
+export async function getWorkOrderScorecard(siteCode = "SITE-A", days = 30) {
+  const response = await authFetch(`/work-orders/scorecard/role?siteCode=${encodeURIComponent(siteCode)}&days=${days}`);
+  return response.json();
+}
+
+export async function getWorkOrderSlaRules(siteCode = "SITE-A") {
+  const response = await authFetch(`/work-orders/sla-rules?siteCode=${encodeURIComponent(siteCode)}`);
+  return response.json();
+}
+
+export async function createWorkOrderSlaRule(payload: {
+  siteCode: string;
+  name: string;
+  enabled: boolean;
+  appliesPriority?: "low" | "medium" | "high" | "critical";
+  appliesDepartment?: string;
+  breachAfterHours: number;
+  escalationChannel: "email" | "teams_webhook" | "whatsapp_webhook";
+  escalationRecipient: string;
+  autoRequestApproval: boolean;
+}) {
+  const response = await authFetch("/work-orders/sla-rules", {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+  return response.json();
+}
+
+export async function updateWorkOrderSlaRule(
+  id: number,
+  payload: Partial<{
+    siteCode: string;
+    name: string;
+    enabled: boolean;
+    appliesPriority: "low" | "medium" | "high" | "critical";
+    appliesDepartment: string;
+    breachAfterHours: number;
+    escalationChannel: "email" | "teams_webhook" | "whatsapp_webhook";
+    escalationRecipient: string;
+    autoRequestApproval: boolean;
+  }>
+) {
+  const response = await authFetch(`/work-orders/sla-rules/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+  return response.json();
+}
+
+export async function runWorkOrderSlaEvaluation(siteCode?: string) {
+  const response = await authFetch("/work-orders/sla-evaluate/run", {
+    method: "POST",
+    body: JSON.stringify(siteCode ? { siteCode } : {})
+  });
+  return response.json();
+}
+
+export async function getWorkOrderEscalations(siteCode = "SITE-A") {
+  const response = await authFetch(`/work-orders/escalations?siteCode=${encodeURIComponent(siteCode)}&limit=100`);
+  return response.json();
+}
+
+export async function retryWorkOrderEscalationsNow() {
+  const response = await authFetch("/work-orders/escalations/retry-run", {
+    method: "POST"
+  });
+  return response.json();
+}
+
+export async function uploadWorkOrderAttachment(
+  id: number,
+  payload: { fileName: string; mimeType: string; contentBase64: string; notes?: string }
+) {
+  const response = await authFetch(`/work-orders/${id}/attachments`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+  return response.json();
+}
+
+export async function getWorkOrderAttachments(id: number) {
+  const response = await authFetch(`/work-orders/${id}/attachments`);
+  return response.json();
+}
+
+export async function getWorkOrderChecklist(id: number) {
+  const response = await authFetch(`/work-orders/${id}/checklist`);
+  return response.json();
+}
+
+export async function createWorkOrderChecklistItem(id: number, payload: { title: string; assigneeName?: string; dueAt?: string }) {
+  const response = await authFetch(`/work-orders/${id}/checklist`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+  return response.json();
+}
+
+export async function updateWorkOrderChecklistItemStatus(id: number, itemId: number, status: "todo" | "done") {
+  const response = await authFetch(`/work-orders/${id}/checklist/${itemId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status })
+  });
+  return response.json();
+}
+
+export async function getWorkOrderComments(id: number, limit = 100) {
+  const response = await authFetch(`/work-orders/${id}/comments?limit=${limit}`);
+  return response.json();
+}
+
+export async function createWorkOrderComment(id: number, message: string) {
+  const response = await authFetch(`/work-orders/${id}/comments`, {
+    method: "POST",
+    body: JSON.stringify({ message })
+  });
+  return response.json();
+}
+
+export async function getWorkOrderDependencies(id: number) {
+  const response = await authFetch(`/work-orders/${id}/dependencies`);
+  return response.json();
+}
+
+export async function addWorkOrderDependency(id: number, dependsOnWorkOrderId: number) {
+  const response = await authFetch(`/work-orders/${id}/dependencies`, {
+    method: "POST",
+    body: JSON.stringify({ dependsOnWorkOrderId })
+  });
+  return response.json();
+}
+
+export async function removeWorkOrderDependency(id: number, dependsOnId: number) {
+  const response = await authFetch(`/work-orders/${id}/dependencies/${dependsOnId}`, {
+    method: "DELETE"
+  });
+  return response.json();
+}
+
+export async function generateExecutiveShiftReportPdf(siteCode = "SITE-A") {
+  const response = await authFetch("/work-orders/reports/executive/pdf", {
+    method: "POST",
+    body: JSON.stringify({ siteCode })
+  });
+  return response.json();
+}
+
+export async function dispatchExecutiveShiftReportNow() {
+  const response = await authFetch("/work-orders/reports/executive/pdf/dispatch", {
+    method: "POST"
+  });
+  return response.json();
+}

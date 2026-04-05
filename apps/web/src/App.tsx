@@ -5,6 +5,8 @@ import {
   assignRolePermissions,
   assignUserRoles,
   closeInvestigationCase,
+  closeWorkOrder,
+  createWorkOrder,
   createSite,
   createInvestigationCase,
   createFaultEvent,
@@ -12,6 +14,8 @@ import {
   createRbacRole,
   createRbacUser,
   createEnterpriseArtifactToken,
+  createWorkOrderChecklistItem,
+  createWorkOrderComment,
   deleteFaultRule,
   getCrossSiteComparison,
   getEnterpriseExportBundle,
@@ -39,6 +43,10 @@ import {
   getPlantKpis,
   getRbacSummary,
   getWeeklyGmRuns,
+  getWorkOrderAttribution,
+  getWorkOrderScorecard,
+  getWorkOrders,
+  getWorkOrderShiftBoard,
   hasToken,
   importCsv,
   importRows,
@@ -49,12 +57,32 @@ import {
   runWeeklyGmReport,
   runEnterpriseSyntheticLoad,
   runIronmindWhatIf,
+  requestWorkOrderApproval,
   saveOperatorEntry,
   subscribeIronmindStream,
   getSites,
   getSiteContext,
   grantSiteAccess,
   persistEnterpriseExportBundle,
+  approveWorkOrder,
+  createWorkOrderSlaRule,
+  dispatchExecutiveShiftReportNow,
+  generateExecutiveShiftReportPdf,
+  getWorkOrderAttachments,
+  getWorkOrderChecklist,
+  getWorkOrderComments,
+  getWorkOrderDependencies,
+  getWorkOrderEscalations,
+  updateWorkOrder,
+  getWorkOrderSlaRules,
+  getWorkOrderWorkflowBoard,
+  removeWorkOrderDependency,
+  retryWorkOrderEscalationsNow,
+  runWorkOrderSlaEvaluation,
+  uploadWorkOrderAttachment,
+  addWorkOrderDependency,
+  updateWorkOrderChecklistItemStatus,
+  updateWorkOrderSlaRule,
   updateFaultRule
 } from "./api";
 
@@ -179,6 +207,50 @@ export function App() {
   const [syntheticRuns, setSyntheticRuns] = useState<Array<Record<string, unknown>>>([]);
   const [exportArtifacts, setExportArtifacts] = useState<Array<Record<string, unknown>>>([]);
   const [crossSiteComparison, setCrossSiteComparison] = useState<Array<Record<string, unknown>>>([]);
+  const [workOrders, setWorkOrders] = useState<Array<Record<string, unknown>>>([]);
+  const [workOrderBoard, setWorkOrderBoard] = useState<Record<string, unknown> | null>(null);
+  const [workOrderAttribution, setWorkOrderAttribution] = useState<Record<string, unknown> | null>(null);
+  const [workOrderScorecard, setWorkOrderScorecard] = useState<Record<string, unknown> | null>(null);
+  const [workOrderStatus, setWorkOrderStatus] = useState("");
+  const [workOrderSlaRules, setWorkOrderSlaRules] = useState<Array<Record<string, unknown>>>([]);
+  const [workOrderEscalations, setWorkOrderEscalations] = useState<Array<Record<string, unknown>>>([]);
+  const [workOrderAttachments, setWorkOrderAttachments] = useState<Array<Record<string, unknown>>>([]);
+  const [workflowBoard, setWorkflowBoard] = useState<Record<string, unknown> | null>(null);
+  const [workflowChecklistItems, setWorkflowChecklistItems] = useState<Array<Record<string, unknown>>>([]);
+  const [workflowComments, setWorkflowComments] = useState<Array<Record<string, unknown>>>([]);
+  const [workflowDependencies, setWorkflowDependencies] = useState<Array<Record<string, unknown>>>([]);
+  const [newChecklistTitle, setNewChecklistTitle] = useState("Lockout and isolate equipment before hose replacement");
+  const [newChecklistAssignee, setNewChecklistAssignee] = useState("Shift Artisan");
+  const [newChecklistDueAt, setNewChecklistDueAt] = useState(new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString().slice(0, 16));
+  const [newWorkflowComment, setNewWorkflowComment] = useState("Waiting on stores confirmation for hydraulic seal kit.");
+  const [newDependencyWorkOrderId, setNewDependencyWorkOrderId] = useState<number | "">("");
+  const [slaRuleName, setSlaRuleName] = useState("Critical work order breach");
+  const [slaRulePriority, setSlaRulePriority] = useState<"low" | "medium" | "high" | "critical">("critical");
+  const [slaRuleDepartment, setSlaRuleDepartment] = useState("operations");
+  const [slaRuleBreachHours, setSlaRuleBreachHours] = useState(6);
+  const [slaRuleChannel, setSlaRuleChannel] = useState<"email" | "teams_webhook" | "whatsapp_webhook">("email");
+  const [slaRuleRecipient, setSlaRuleRecipient] = useState("shift.control@ironlog.local");
+  const [slaRuleAutoApproval, setSlaRuleAutoApproval] = useState(true);
+  const [selectedSlaRuleId, setSelectedSlaRuleId] = useState<number | "">("");
+  const [attachmentNotes, setAttachmentNotes] = useState("Pressure test result and photo evidence");
+  const [selectedAttachmentFile, setSelectedAttachmentFile] = useState<File | null>(null);
+  const [attachmentPreviewUrl, setAttachmentPreviewUrl] = useState<string | null>(null);
+  const [executiveReportStatus, setExecutiveReportStatus] = useState("");
+  const [newWorkOrderDepartment, setNewWorkOrderDepartment] = useState("operations");
+  const [newWorkOrderMachineCode, setNewWorkOrderMachineCode] = useState("EQ-1001");
+  const [newWorkOrderFaultCode, setNewWorkOrderFaultCode] = useState("HYD-LEAK");
+  const [newWorkOrderTitle, setNewWorkOrderTitle] = useState("Hydraulic hose replacement and pressure test");
+  const [newWorkOrderDescription, setNewWorkOrderDescription] = useState("Recurring leak observed in shift handover. Replace assembly and verify under load.");
+  const [newWorkOrderPriority, setNewWorkOrderPriority] = useState<"low" | "medium" | "high" | "critical">("high");
+  const [newWorkOrderAssignedTo, setNewWorkOrderAssignedTo] = useState("Shift Foreman");
+  const [newWorkOrderDueAt, setNewWorkOrderDueAt] = useState(new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString().slice(0, 16));
+  const [newWorkOrderEstimatedCost, setNewWorkOrderEstimatedCost] = useState(18000);
+  const [newWorkOrderDowntimeHours, setNewWorkOrderDowntimeHours] = useState(3);
+  const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<number | "">("");
+  const [selectedWorkOrderStatus, setSelectedWorkOrderStatus] = useState<"open" | "assigned" | "in_progress" | "blocked" | "pending_approval" | "approved" | "closed">("assigned");
+  const [selectedWorkOrderActualCost, setSelectedWorkOrderActualCost] = useState(12000);
+  const [selectedWorkOrderDowntimeHours, setSelectedWorkOrderDowntimeHours] = useState(2);
+  const [selectedWorkOrderEvidence, setSelectedWorkOrderEvidence] = useState("Replaced hose kit and validated pressure curve within range.");
   const [siteItems, setSiteItems] = useState<Array<Record<string, unknown>>>([]);
   const [newSiteCode, setNewSiteCode] = useState("SITE-D");
   const [newSiteName, setNewSiteName] = useState("Expansion Belt D");
@@ -510,6 +582,81 @@ export function App() {
     });
   }
 
+  async function refreshWorkOrderExecution(siteCode = enterpriseSiteCode) {
+    const [orders, board, attribution, scorecard, rules, escalations, workflow] = await Promise.all([
+      getWorkOrders(siteCode),
+      getWorkOrderShiftBoard(siteCode),
+      getWorkOrderAttribution(siteCode, enterpriseWindowHours),
+      getWorkOrderScorecard(siteCode, 30),
+      getWorkOrderSlaRules(siteCode),
+      getWorkOrderEscalations(siteCode),
+      getWorkOrderWorkflowBoard(siteCode)
+    ]);
+
+    const nextOrders = (orders.items ?? []) as Array<Record<string, unknown>>;
+    setWorkOrders(nextOrders);
+    setWorkOrderBoard(board as Record<string, unknown>);
+    setWorkOrderAttribution(attribution as Record<string, unknown>);
+    setWorkOrderScorecard(scorecard as Record<string, unknown>);
+    setWorkOrderSlaRules((rules.items ?? []) as Array<Record<string, unknown>>);
+    setWorkOrderEscalations((escalations.items ?? []) as Array<Record<string, unknown>>);
+    setWorkflowBoard(workflow as Record<string, unknown>);
+
+    if (nextOrders.length > 0 && selectedWorkOrderId === "") {
+      setSelectedWorkOrderId(Number(nextOrders[0].id));
+    }
+
+    const ruleItems = (rules.items ?? []) as Array<Record<string, unknown>>;
+    if (ruleItems.length > 0 && selectedSlaRuleId === "") {
+      setSelectedSlaRuleId(Number(ruleItems[0].id));
+    }
+
+    if (nextOrders.length > 0 && newDependencyWorkOrderId === "") {
+      const candidate = nextOrders.find((item) => Number(item.id) !== Number(selectedWorkOrderId));
+      if (candidate) {
+        setNewDependencyWorkOrderId(Number(candidate.id));
+      }
+    }
+  }
+
+  async function fileToBase64(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result ?? ""));
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function refreshSelectedWorkOrderAttachments() {
+    if (selectedWorkOrderId === "") {
+      setWorkOrderAttachments([]);
+      return;
+    }
+
+    const attachments = await getWorkOrderAttachments(Number(selectedWorkOrderId));
+    setWorkOrderAttachments((attachments.items ?? []) as Array<Record<string, unknown>>);
+  }
+
+  async function refreshSelectedWorkflowItems() {
+    if (selectedWorkOrderId === "") {
+      setWorkflowChecklistItems([]);
+      setWorkflowComments([]);
+      setWorkflowDependencies([]);
+      return;
+    }
+
+    const [checklist, comments, dependencies] = await Promise.all([
+      getWorkOrderChecklist(Number(selectedWorkOrderId)),
+      getWorkOrderComments(Number(selectedWorkOrderId), 120),
+      getWorkOrderDependencies(Number(selectedWorkOrderId))
+    ]);
+
+    setWorkflowChecklistItems((checklist.items ?? []) as Array<Record<string, unknown>>);
+    setWorkflowComments((comments.items ?? []) as Array<Record<string, unknown>>);
+    setWorkflowDependencies((dependencies.items ?? []) as Array<Record<string, unknown>>);
+  }
+
   async function refreshEnterpriseOverview(hours = enterpriseWindowHours, siteCode = enterpriseSiteCode) {
     const overview = await getEnterpriseOverviewBySite(hours, siteCode);
     setEnterpriseOverview(overview as Record<string, unknown>);
@@ -528,6 +675,330 @@ export function App() {
     setSiteItems((sites.items ?? []) as Array<Record<string, unknown>>);
     setCrossSiteComparison((comparison.items ?? []) as Array<Record<string, unknown>>);
     setSiteContext(context as Record<string, unknown>);
+    await refreshWorkOrderExecution(siteCode);
+  }
+
+  async function onCreateWorkOrder(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    try {
+      const created = await createWorkOrder({
+        siteCode: enterpriseSiteCode,
+        department: newWorkOrderDepartment,
+        machineCode: newWorkOrderMachineCode,
+        faultCode: newWorkOrderFaultCode,
+        title: newWorkOrderTitle,
+        description: newWorkOrderDescription,
+        priority: newWorkOrderPriority,
+        assignedToName: newWorkOrderAssignedTo,
+        dueAt: newWorkOrderDueAt ? new Date(newWorkOrderDueAt).toISOString() : undefined,
+        estimatedCost: newWorkOrderEstimatedCost,
+        downtimeHours: newWorkOrderDowntimeHours
+      });
+
+      setWorkOrderStatus(`Work order opened: ${String(created.workOrderCode ?? "n/a")}`);
+      await refreshWorkOrderExecution();
+      await refreshSelectedWorkflowItems();
+    } catch (err) {
+      setWorkOrderStatus(err instanceof Error ? err.message : "Failed to create work order");
+    }
+  }
+
+  async function onUpdateWorkOrderState(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (selectedWorkOrderId === "") {
+      setWorkOrderStatus("Select a work order first.");
+      return;
+    }
+
+    try {
+      await updateWorkOrder(Number(selectedWorkOrderId), {
+        status: selectedWorkOrderStatus
+      });
+      setWorkOrderStatus(`Work order ${selectedWorkOrderId} updated to ${selectedWorkOrderStatus}.`);
+      await refreshWorkOrderExecution();
+      await refreshSelectedWorkflowItems();
+    } catch (err) {
+      setWorkOrderStatus(err instanceof Error ? err.message : "Failed to update work order");
+    }
+  }
+
+  async function onRequestSelectedWorkOrderApproval() {
+    if (selectedWorkOrderId === "") {
+      setWorkOrderStatus("Select a work order first.");
+      return;
+    }
+
+    try {
+      await requestWorkOrderApproval(Number(selectedWorkOrderId), "Supervisor approval requested from command board");
+      setWorkOrderStatus(`Approval requested for work order ${selectedWorkOrderId}.`);
+      await refreshWorkOrderExecution();
+      await refreshSelectedWorkflowItems();
+    } catch (err) {
+      setWorkOrderStatus(err instanceof Error ? err.message : "Failed to request approval");
+    }
+  }
+
+  async function onApproveSelectedWorkOrder() {
+    if (selectedWorkOrderId === "") {
+      setWorkOrderStatus("Select a work order first.");
+      return;
+    }
+
+    try {
+      await approveWorkOrder(Number(selectedWorkOrderId), "Approved from execution control panel");
+      setWorkOrderStatus(`Work order ${selectedWorkOrderId} approved.`);
+      await refreshWorkOrderExecution();
+      await refreshSelectedWorkflowItems();
+    } catch (err) {
+      setWorkOrderStatus(err instanceof Error ? err.message : "Failed to approve work order");
+    }
+  }
+
+  async function onCloseSelectedWorkOrder() {
+    if (selectedWorkOrderId === "") {
+      setWorkOrderStatus("Select a work order first.");
+      return;
+    }
+
+    try {
+      await closeWorkOrder(Number(selectedWorkOrderId), {
+        actualCost: selectedWorkOrderActualCost,
+        downtimeHours: selectedWorkOrderDowntimeHours,
+        evidenceNotes: selectedWorkOrderEvidence
+      });
+      setWorkOrderStatus(`Work order ${selectedWorkOrderId} closed.`);
+      await refreshWorkOrderExecution();
+      await refreshSelectedWorkOrderAttachments();
+      await refreshSelectedWorkflowItems();
+    } catch (err) {
+      setWorkOrderStatus(err instanceof Error ? err.message : "Failed to close work order");
+    }
+  }
+
+  async function onAddChecklistItem(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (selectedWorkOrderId === "") {
+      setWorkOrderStatus("Select a work order first.");
+      return;
+    }
+
+    try {
+      await createWorkOrderChecklistItem(Number(selectedWorkOrderId), {
+        title: newChecklistTitle,
+        assigneeName: newChecklistAssignee,
+        dueAt: newChecklistDueAt ? new Date(newChecklistDueAt).toISOString() : undefined
+      });
+      setWorkOrderStatus(`Checklist item added to work order ${selectedWorkOrderId}.`);
+      await Promise.all([refreshWorkOrderExecution(), refreshSelectedWorkflowItems()]);
+    } catch (err) {
+      setWorkOrderStatus(err instanceof Error ? err.message : "Failed to add checklist item");
+    }
+  }
+
+  async function onToggleChecklistItem(itemId: number, nextStatus: "todo" | "done") {
+    if (selectedWorkOrderId === "") {
+      setWorkOrderStatus("Select a work order first.");
+      return;
+    }
+
+    try {
+      await updateWorkOrderChecklistItemStatus(Number(selectedWorkOrderId), itemId, nextStatus);
+      await Promise.all([refreshWorkOrderExecution(), refreshSelectedWorkflowItems()]);
+    } catch (err) {
+      setWorkOrderStatus(err instanceof Error ? err.message : "Failed to update checklist item");
+    }
+  }
+
+  async function onAddWorkflowComment(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (selectedWorkOrderId === "") {
+      setWorkOrderStatus("Select a work order first.");
+      return;
+    }
+
+    try {
+      await createWorkOrderComment(Number(selectedWorkOrderId), newWorkflowComment);
+      setWorkOrderStatus(`Comment added to work order ${selectedWorkOrderId}.`);
+      await Promise.all([refreshWorkOrderExecution(), refreshSelectedWorkflowItems()]);
+    } catch (err) {
+      setWorkOrderStatus(err instanceof Error ? err.message : "Failed to add comment");
+    }
+  }
+
+  async function onAddDependency(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (selectedWorkOrderId === "") {
+      setWorkOrderStatus("Select a work order first.");
+      return;
+    }
+    if (newDependencyWorkOrderId === "") {
+      setWorkOrderStatus("Select a dependency work order.");
+      return;
+    }
+
+    try {
+      await addWorkOrderDependency(Number(selectedWorkOrderId), Number(newDependencyWorkOrderId));
+      setWorkOrderStatus(`Dependency added to work order ${selectedWorkOrderId}.`);
+      await Promise.all([refreshWorkOrderExecution(), refreshSelectedWorkflowItems()]);
+    } catch (err) {
+      setWorkOrderStatus(err instanceof Error ? err.message : "Failed to add dependency");
+    }
+  }
+
+  async function onRemoveDependency(dependsOnId: number) {
+    if (selectedWorkOrderId === "") {
+      setWorkOrderStatus("Select a work order first.");
+      return;
+    }
+
+    try {
+      await removeWorkOrderDependency(Number(selectedWorkOrderId), dependsOnId);
+      await Promise.all([refreshWorkOrderExecution(), refreshSelectedWorkflowItems()]);
+    } catch (err) {
+      setWorkOrderStatus(err instanceof Error ? err.message : "Failed to remove dependency");
+    }
+  }
+
+  async function onCreateSlaRule(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    try {
+      const created = await createWorkOrderSlaRule({
+        siteCode: enterpriseSiteCode,
+        name: slaRuleName,
+        enabled: true,
+        appliesPriority: slaRulePriority,
+        appliesDepartment: slaRuleDepartment,
+        breachAfterHours: slaRuleBreachHours,
+        escalationChannel: slaRuleChannel,
+        escalationRecipient: slaRuleRecipient,
+        autoRequestApproval: slaRuleAutoApproval
+      });
+
+      setWorkOrderStatus(`SLA rule saved: ${String(created.name ?? "-")}`);
+      await refreshWorkOrderExecution();
+    } catch (err) {
+      setWorkOrderStatus(err instanceof Error ? err.message : "Failed to save SLA rule");
+    }
+  }
+
+  async function onToggleSelectedSlaRule(enabled: boolean) {
+    if (selectedSlaRuleId === "") {
+      setWorkOrderStatus("Select an SLA rule first.");
+      return;
+    }
+
+    try {
+      await updateWorkOrderSlaRule(Number(selectedSlaRuleId), { enabled });
+      setWorkOrderStatus(`SLA rule ${selectedSlaRuleId} ${enabled ? "enabled" : "disabled"}.`);
+      await refreshWorkOrderExecution();
+    } catch (err) {
+      setWorkOrderStatus(err instanceof Error ? err.message : "Failed to update SLA rule");
+    }
+  }
+
+  async function onRunSlaEvaluationNow() {
+    try {
+      const result = await runWorkOrderSlaEvaluation(enterpriseSiteCode);
+      setWorkOrderStatus(`SLA evaluation done: escalations ${String(result.escalationsTriggered ?? 0)}.`);
+      await refreshWorkOrderExecution();
+    } catch (err) {
+      setWorkOrderStatus(err instanceof Error ? err.message : "SLA evaluation failed");
+    }
+  }
+
+  async function onUploadAttachment(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (selectedWorkOrderId === "") {
+      setWorkOrderStatus("Select a work order first.");
+      return;
+    }
+    if (!selectedAttachmentFile) {
+      setWorkOrderStatus("Select a file to upload.");
+      return;
+    }
+
+    try {
+      const base64 = await fileToBase64(selectedAttachmentFile);
+      await uploadWorkOrderAttachment(Number(selectedWorkOrderId), {
+        fileName: selectedAttachmentFile.name,
+        mimeType: selectedAttachmentFile.type || "application/octet-stream",
+        contentBase64: base64,
+        notes: attachmentNotes
+      });
+      setWorkOrderStatus(`Attachment uploaded to work order ${selectedWorkOrderId}.`);
+      setSelectedAttachmentFile(null);
+      await refreshSelectedWorkOrderAttachments();
+      await refreshWorkOrderExecution();
+    } catch (err) {
+      setWorkOrderStatus(err instanceof Error ? err.message : "Attachment upload failed");
+    }
+  }
+
+  async function onDownloadWorkOrderAttachment(attachmentId: number, fileName: string) {
+    if (selectedWorkOrderId === "") {
+      setWorkOrderStatus("Select a work order first.");
+      return;
+    }
+
+    try {
+      const apiOrigin = apiBaseUrl.replace(/\/api\/?$/, "");
+      const token = localStorage.getItem("ironlog.token");
+      const url = `${apiOrigin}/api/work-orders/${selectedWorkOrderId}/attachments/${attachmentId}/download`;
+      const response = await fetch(url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {}
+      });
+
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = fileName;
+      anchor.click();
+      URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      setWorkOrderStatus(err instanceof Error ? err.message : "Attachment download failed");
+    }
+  }
+
+  async function onGenerateExecutiveReport() {
+    try {
+      const result = await generateExecutiveShiftReportPdf(enterpriseSiteCode);
+      const apiOrigin = apiBaseUrl.replace(/\/api\/?$/, "");
+      const fullUrl = `${apiOrigin}${String(result.downloadUrl ?? "")}`;
+      setExecutiveReportStatus(`Executive report generated: ${String(result.fileName ?? "report.pdf")}`);
+      await navigator.clipboard.writeText(fullUrl);
+      setExecutiveReportStatus((prev) => `${prev} | link copied`);
+      await refreshWorkOrderExecution();
+    } catch (err) {
+      setExecutiveReportStatus(err instanceof Error ? err.message : "Failed to generate executive report");
+    }
+  }
+
+  async function onRetryEscalationsNow() {
+    try {
+      const result = await retryWorkOrderEscalationsNow();
+      setWorkOrderStatus(
+        `Escalation retry run complete: retried ${String(result.retried ?? 0)}, sent ${String(result.sent ?? 0)}, failed ${String(result.failed ?? 0)}.`
+      );
+      await refreshWorkOrderExecution();
+    } catch (err) {
+      setWorkOrderStatus(err instanceof Error ? err.message : "Escalation retry failed");
+    }
+  }
+
+  async function onDispatchExecutiveReportNow() {
+    try {
+      const result = await dispatchExecutiveShiftReportNow();
+      const recipients = ((result.recipients ?? []) as Array<Record<string, unknown>>).length;
+      setExecutiveReportStatus(`Executive dispatch complete: recipients ${recipients}.`);
+      await refreshWorkOrderExecution();
+    } catch (err) {
+      setExecutiveReportStatus(err instanceof Error ? err.message : "Executive dispatch failed");
+    }
   }
 
   async function onRunSyntheticLoad(event: React.FormEvent<HTMLFormElement>) {
@@ -705,6 +1176,47 @@ export function App() {
     setEditRuleRecipient(String(rule.recipient ?? ""));
     setEditRuleEnabled(Boolean(rule.enabled));
   }, [selectedFaultRuleId, faultRules]);
+
+  useEffect(() => {
+    if (selectedWorkOrderId === "") {
+      return;
+    }
+
+    const item = workOrders.find((row) => Number(row.id) === Number(selectedWorkOrderId));
+    if (!item) {
+      return;
+    }
+
+    const status = String(item.status ?? "assigned");
+    if (["open", "assigned", "in_progress", "blocked", "pending_approval", "approved", "closed"].includes(status)) {
+      setSelectedWorkOrderStatus(status as "open" | "assigned" | "in_progress" | "blocked" | "pending_approval" | "approved" | "closed");
+    }
+
+    setSelectedWorkOrderActualCost(Number(item.actualCost ?? 0));
+    setSelectedWorkOrderDowntimeHours(Number(item.downtimeHours ?? 0));
+    setSelectedWorkOrderEvidence(String(item.evidenceNotes ?? ""));
+    void refreshSelectedWorkOrderAttachments();
+    void refreshSelectedWorkflowItems();
+  }, [selectedWorkOrderId, workOrders]);
+
+  useEffect(() => {
+    if (!selectedAttachmentFile) {
+      setAttachmentPreviewUrl(null);
+      return;
+    }
+
+    if (!selectedAttachmentFile.type.startsWith("image/")) {
+      setAttachmentPreviewUrl(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(selectedAttachmentFile);
+    setAttachmentPreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [selectedAttachmentFile]);
 
   async function onLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -2112,6 +2624,510 @@ export function App() {
                       </td>
                       <td>
                         <button type="button" onClick={() => void onCreateArtifactToken(Number(item.id))}>Create Token</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="admin-table-wrap">
+              <h4>Execution Control Loop</h4>
+              <p className="admin-note">Digital work orders, supervisor approvals, shift command board, and cost/downtime attribution.</p>
+              <p className="admin-note">{workOrderStatus}</p>
+
+              <div className="admin-grid">
+                <form className="admin-form" onSubmit={onCreateWorkOrder}>
+                  <h4>Open Work Order</h4>
+                  <input value={newWorkOrderDepartment} onChange={(e) => setNewWorkOrderDepartment(e.target.value)} placeholder="Department" />
+                  <input value={newWorkOrderMachineCode} onChange={(e) => setNewWorkOrderMachineCode(e.target.value)} placeholder="Machine code" />
+                  <input value={newWorkOrderFaultCode} onChange={(e) => setNewWorkOrderFaultCode(e.target.value)} placeholder="Fault code" />
+                  <input value={newWorkOrderTitle} onChange={(e) => setNewWorkOrderTitle(e.target.value)} placeholder="Work order title" />
+                  <textarea value={newWorkOrderDescription} onChange={(e) => setNewWorkOrderDescription(e.target.value)} rows={4} />
+                  <select value={newWorkOrderPriority} onChange={(e) => setNewWorkOrderPriority(e.target.value as "low" | "medium" | "high" | "critical")}>
+                    <option value="low">low</option>
+                    <option value="medium">medium</option>
+                    <option value="high">high</option>
+                    <option value="critical">critical</option>
+                  </select>
+                  <input value={newWorkOrderAssignedTo} onChange={(e) => setNewWorkOrderAssignedTo(e.target.value)} placeholder="Assigned to" />
+                  <input type="datetime-local" value={newWorkOrderDueAt} onChange={(e) => setNewWorkOrderDueAt(e.target.value)} />
+                  <input type="number" min={0} step="100" value={newWorkOrderEstimatedCost} onChange={(e) => setNewWorkOrderEstimatedCost(Number(e.target.value))} placeholder="Estimated cost" />
+                  <input type="number" min={0} step="0.1" value={newWorkOrderDowntimeHours} onChange={(e) => setNewWorkOrderDowntimeHours(Number(e.target.value))} placeholder="Downtime hours" />
+                  <button type="submit">Open Work Order</button>
+                </form>
+
+                <form className="admin-form" onSubmit={onUpdateWorkOrderState}>
+                  <h4>Progress and Closure</h4>
+                  <select
+                    value={selectedWorkOrderId === "" ? "" : String(selectedWorkOrderId)}
+                    onChange={(e) => setSelectedWorkOrderId(e.target.value ? Number(e.target.value) : "")}
+                  >
+                    <option value="">Select work order</option>
+                    {workOrders.slice(0, 120).map((item, index) => (
+                      <option key={index} value={String(item.id)}>
+                        {String(item.workOrderCode ?? "-")} | {String(item.status ?? "-")} | {String(item.priority ?? "-")}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={selectedWorkOrderStatus}
+                    onChange={(e) => setSelectedWorkOrderStatus(
+                      e.target.value as "open" | "assigned" | "in_progress" | "blocked" | "pending_approval" | "approved" | "closed"
+                    )}
+                  >
+                    <option value="open">open</option>
+                    <option value="assigned">assigned</option>
+                    <option value="in_progress">in_progress</option>
+                    <option value="blocked">blocked</option>
+                    <option value="pending_approval">pending_approval</option>
+                    <option value="approved">approved</option>
+                    <option value="closed">closed</option>
+                  </select>
+                  <button type="submit">Update Status</button>
+                  <button type="button" onClick={() => void onRequestSelectedWorkOrderApproval()}>Request Approval</button>
+                  <button type="button" onClick={() => void onApproveSelectedWorkOrder()}>Supervisor Approve</button>
+                  <input
+                    type="number"
+                    min={0}
+                    step="100"
+                    value={selectedWorkOrderActualCost}
+                    onChange={(e) => setSelectedWorkOrderActualCost(Number(e.target.value))}
+                    placeholder="Actual cost"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.1"
+                    value={selectedWorkOrderDowntimeHours}
+                    onChange={(e) => setSelectedWorkOrderDowntimeHours(Number(e.target.value))}
+                    placeholder="Downtime hours"
+                  />
+                  <textarea value={selectedWorkOrderEvidence} onChange={(e) => setSelectedWorkOrderEvidence(e.target.value)} rows={3} placeholder="Evidence / closure notes" />
+                  <button type="button" onClick={() => void onCloseSelectedWorkOrder()}>Close Work Order</button>
+                </form>
+
+                <div className="admin-form">
+                  <h4>Role Scorecard</h4>
+                  <pre className="audit-json">{JSON.stringify(workOrderScorecard ?? {}, null, 2)}</pre>
+                </div>
+
+                <form className="admin-form" onSubmit={onCreateSlaRule}>
+                  <h4>SLA and Escalation Rules</h4>
+                  <input value={slaRuleName} onChange={(e) => setSlaRuleName(e.target.value)} placeholder="Rule name" />
+                  <select value={slaRulePriority} onChange={(e) => setSlaRulePriority(e.target.value as "low" | "medium" | "high" | "critical")}>
+                    <option value="low">low</option>
+                    <option value="medium">medium</option>
+                    <option value="high">high</option>
+                    <option value="critical">critical</option>
+                  </select>
+                  <input value={slaRuleDepartment} onChange={(e) => setSlaRuleDepartment(e.target.value)} placeholder="Department" />
+                  <input type="number" min={0.5} step="0.5" value={slaRuleBreachHours} onChange={(e) => setSlaRuleBreachHours(Number(e.target.value))} placeholder="Breach hours" />
+                  <select value={slaRuleChannel} onChange={(e) => setSlaRuleChannel(e.target.value as "email" | "teams_webhook" | "whatsapp_webhook")}>
+                    <option value="email">email</option>
+                    <option value="teams_webhook">teams_webhook</option>
+                    <option value="whatsapp_webhook">whatsapp_webhook</option>
+                  </select>
+                  <input value={slaRuleRecipient} onChange={(e) => setSlaRuleRecipient(e.target.value)} placeholder="Recipient" />
+                  <label className="toggle-row">
+                    <input type="checkbox" checked={slaRuleAutoApproval} onChange={(e) => setSlaRuleAutoApproval(e.target.checked)} />
+                    Auto request approval on breach
+                  </label>
+                  <button type="submit">Save SLA Rule</button>
+                  <select value={selectedSlaRuleId === "" ? "" : String(selectedSlaRuleId)} onChange={(e) => setSelectedSlaRuleId(e.target.value ? Number(e.target.value) : "") }>
+                    <option value="">Select SLA rule</option>
+                    {workOrderSlaRules.map((rule, index) => (
+                      <option key={index} value={String(rule.id)}>
+                        {String(rule.name ?? "-")} | {String(rule.enabled ? "enabled" : "disabled")}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button" onClick={() => void onToggleSelectedSlaRule(true)}>Enable Rule</button>
+                  <button type="button" onClick={() => void onToggleSelectedSlaRule(false)}>Disable Rule</button>
+                  <button type="button" onClick={() => void onRunSlaEvaluationNow()}>Run SLA Evaluation Now</button>
+                </form>
+
+                <form className="admin-form" onSubmit={onUploadAttachment}>
+                  <h4>Evidence Attachments and Executive Report</h4>
+                  <input type="file" onChange={(e) => setSelectedAttachmentFile(e.target.files?.[0] ?? null)} />
+                  <input value={attachmentNotes} onChange={(e) => setAttachmentNotes(e.target.value)} placeholder="Attachment notes" />
+                  {attachmentPreviewUrl && (
+                    <img
+                      src={attachmentPreviewUrl}
+                      alt="Attachment preview"
+                      style={{ width: "100%", maxHeight: "220px", objectFit: "cover", borderRadius: "8px", border: "1px solid #2f3a52" }}
+                    />
+                  )}
+                  <button type="submit">Upload Evidence</button>
+                  <button type="button" onClick={() => void onGenerateExecutiveReport()}>Generate Executive Shift PDF</button>
+                  <button type="button" onClick={() => void onDispatchExecutiveReportNow()}>Dispatch Scheduled Report Now</button>
+                  <button type="button" onClick={() => void onRetryEscalationsNow()}>Retry Failed Escalations</button>
+                  <p className="admin-note">{executiveReportStatus}</p>
+                </form>
+              </div>
+            </div>
+
+            <div className="kpi-grid">
+              <article className="kpi-card">
+                <p>Open + Assigned</p>
+                <h2>{String((workOrderBoard?.backlog as Record<string, unknown> | undefined)?.open ?? 0)} / {String((workOrderBoard?.backlog as Record<string, unknown> | undefined)?.assigned ?? 0)}</h2>
+              </article>
+              <article className="kpi-card">
+                <p>In Progress</p>
+                <h2>{String((workOrderBoard?.backlog as Record<string, unknown> | undefined)?.inProgress ?? 0)}</h2>
+              </article>
+              <article className="kpi-card">
+                <p>Blocked</p>
+                <h2>{String((workOrderBoard?.backlog as Record<string, unknown> | undefined)?.blocked ?? 0)}</h2>
+              </article>
+              <article className="kpi-card">
+                <p>Pending Approvals</p>
+                <h2>{String((workOrderBoard?.backlog as Record<string, unknown> | undefined)?.pendingApproval ?? 0)}</h2>
+              </article>
+            </div>
+
+            <div className="admin-table-wrap">
+              <h4>Shift Command Board: Overdue and Blocked</h4>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Title</th>
+                    <th>Status</th>
+                    <th>Priority</th>
+                    <th>Assigned</th>
+                    <th>Due / Updated</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ...(((workOrderBoard?.overdue as Array<Record<string, unknown>> | undefined) ?? []).slice(0, 10)),
+                    ...(((workOrderBoard?.blocked as Array<Record<string, unknown>> | undefined) ?? []).slice(0, 10))
+                  ].map((item, index) => (
+                    <tr key={index}>
+                      <td>{String(item.workOrderCode ?? "-")}</td>
+                      <td>{String(item.title ?? "-")}</td>
+                      <td>{String(item.status ?? "blocked")}</td>
+                      <td>{String(item.priority ?? "-")}</td>
+                      <td>{String(item.assignedToName ?? "Unassigned")}</td>
+                      <td>{String(item.dueAt ?? item.updatedAt ?? "-")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="admin-table-wrap">
+              <h4>Cost and Downtime Attribution by Machine</h4>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Machine</th>
+                    <th>Work Orders</th>
+                    <th>Actual Cost</th>
+                    <th>Downtime Hours</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(((workOrderAttribution?.byMachine as Array<Record<string, unknown>> | undefined) ?? []).slice(0, 20)).map((item, index) => (
+                    <tr key={index}>
+                      <td>{String(item.machineCode ?? "-")}</td>
+                      <td>{String(item.workOrders ?? "-")}</td>
+                      <td>{String(item.actualCost ?? "-")}</td>
+                      <td>{String(item.downtimeHours ?? "-")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="admin-table-wrap">
+              <h4>Department Attribution</h4>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Department</th>
+                    <th>Work Orders</th>
+                    <th>Actual Cost</th>
+                    <th>Downtime Hours</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(((workOrderAttribution?.byDepartment as Array<Record<string, unknown>> | undefined) ?? []).slice(0, 20)).map((item, index) => (
+                    <tr key={index}>
+                      <td>{String(item.department ?? "-")}</td>
+                      <td>{String(item.workOrders ?? "-")}</td>
+                      <td>{String(item.actualCost ?? "-")}</td>
+                      <td>{String(item.downtimeHours ?? "-")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="admin-table-wrap">
+              <h4>Digital Work Order Register</h4>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Department</th>
+                    <th>Machine</th>
+                    <th>Title</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Approval</th>
+                    <th>Est/Actual Cost</th>
+                    <th>Downtime</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {workOrders.slice(0, 120).map((item, index) => (
+                    <tr
+                      key={index}
+                      className={Number(item.id) === Number(selectedWorkOrderId) ? "realtime-highlight" : ""}
+                      onClick={() => setSelectedWorkOrderId(Number(item.id))}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <td>{String(item.workOrderCode ?? "-")}</td>
+                      <td>{String(item.department ?? "-")}</td>
+                      <td>{String(item.machineCode ?? "-")}</td>
+                      <td>{String(item.title ?? "-")}</td>
+                      <td>{String(item.priority ?? "-")}</td>
+                      <td>{String(item.status ?? "-")}</td>
+                      <td>{String(item.approvalRequired ? "required" : "not required")}</td>
+                      <td>{String(item.estimatedCost ?? "0")} / {String(item.actualCost ?? "0")}</td>
+                      <td>{String(item.downtimeHours ?? "0")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="admin-table-wrap">
+              <h4>Asana-Style Workflow Board</h4>
+              <div className="trend-grid">
+                {[
+                  { key: "open", title: "Open" },
+                  { key: "assigned", title: "Assigned" },
+                  { key: "in_progress", title: "In Progress" },
+                  { key: "blocked", title: "Blocked" },
+                  { key: "pending_approval", title: "Pending Approval" },
+                  { key: "approved", title: "Approved" },
+                  { key: "closed", title: "Closed" }
+                ].map((lane) => {
+                  const items = ((workflowBoard?.lanes as Record<string, Array<Record<string, unknown>>> | undefined)?.[lane.key] ?? []).slice(0, 8);
+                  return (
+                    <article className="trend-card" key={lane.key}>
+                      <h5>{lane.title} ({items.length})</h5>
+                      <div className="mobile-cards">
+                        {items.map((item, index) => (
+                          <article
+                            className="mobile-card"
+                            key={index}
+                            onClick={() => setSelectedWorkOrderId(Number(item.id))}
+                            style={{ cursor: "pointer" }}
+                          >
+                            <strong>{String(item.workOrderCode ?? "-")}</strong>
+                            <p>{String(item.title ?? "-")}</p>
+                            <p>Checklist: {String(item.checklistDone ?? 0)}/{String(item.checklistTotal ?? 0)} | Comments: {String(item.commentsTotal ?? 0)}</p>
+                            <p>Dependencies blocked: {String(item.dependenciesBlocked ?? 0)}</p>
+                          </article>
+                        ))}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="admin-grid">
+              <form className="admin-form" onSubmit={onAddChecklistItem}>
+                <h4>Checklist (selected work order)</h4>
+                <input value={newChecklistTitle} onChange={(e) => setNewChecklistTitle(e.target.value)} placeholder="Checklist item" />
+                <input value={newChecklistAssignee} onChange={(e) => setNewChecklistAssignee(e.target.value)} placeholder="Assignee" />
+                <input type="datetime-local" value={newChecklistDueAt} onChange={(e) => setNewChecklistDueAt(e.target.value)} />
+                <button type="submit">Add Checklist Item</button>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Status</th>
+                      <th>Title</th>
+                      <th>Assignee</th>
+                      <th>Due</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {workflowChecklistItems.slice(0, 20).map((item, index) => {
+                      const isDone = String(item.status ?? "todo") === "done";
+                      return (
+                        <tr key={index}>
+                          <td>
+                            <button type="button" onClick={() => void onToggleChecklistItem(Number(item.id), isDone ? "todo" : "done")}>
+                              {isDone ? "Done" : "Todo"}
+                            </button>
+                          </td>
+                          <td>{String(item.title ?? "-")}</td>
+                          <td>{String(item.assigneeName ?? "-")}</td>
+                          <td>{String(item.dueAt ?? "-")}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </form>
+
+              <form className="admin-form" onSubmit={onAddWorkflowComment}>
+                <h4>Threaded Comments</h4>
+                <textarea value={newWorkflowComment} onChange={(e) => setNewWorkflowComment(e.target.value)} rows={4} />
+                <button type="submit">Post Comment</button>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>When</th>
+                      <th>Author</th>
+                      <th>Message</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {workflowComments.slice(0, 30).map((item, index) => (
+                      <tr key={index}>
+                        <td>{String(item.createdAt ?? "-")}</td>
+                        <td>{String(item.authorEmail ?? item.authorUserId ?? "-")}</td>
+                        <td>{String(item.message ?? "-")}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </form>
+
+              <form className="admin-form" onSubmit={onAddDependency}>
+                <h4>Dependencies</h4>
+                <select
+                  value={newDependencyWorkOrderId === "" ? "" : String(newDependencyWorkOrderId)}
+                  onChange={(e) => setNewDependencyWorkOrderId(e.target.value ? Number(e.target.value) : "")}
+                >
+                  <option value="">Select dependency work order</option>
+                  {workOrders
+                    .filter((item) => Number(item.id) !== Number(selectedWorkOrderId))
+                    .slice(0, 120)
+                    .map((item, index) => (
+                      <option key={index} value={String(item.id)}>
+                        {String(item.workOrderCode ?? "-")} | {String(item.status ?? "-")} | {String(item.title ?? "-")}
+                      </option>
+                    ))}
+                </select>
+                <button type="submit">Add Dependency</button>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Depends On</th>
+                      <th>Title</th>
+                      <th>Status</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {workflowDependencies.slice(0, 30).map((item, index) => (
+                      <tr key={index}>
+                        <td>{String(item.dependsOnWorkOrderCode ?? item.dependsOnWorkOrderId ?? "-")}</td>
+                        <td>{String(item.dependsOnTitle ?? "-")}</td>
+                        <td>{String(item.dependsOnStatus ?? "-")}</td>
+                        <td>
+                          <button type="button" onClick={() => void onRemoveDependency(Number(item.dependsOnWorkOrderId))}>
+                            Remove
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </form>
+            </div>
+
+            <div className="admin-table-wrap">
+              <h4>SLA Rules and Escalations</h4>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Rule</th>
+                    <th>Priority</th>
+                    <th>Department</th>
+                    <th>Breach Hours</th>
+                    <th>Channel</th>
+                    <th>Recipient</th>
+                    <th>Enabled</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {workOrderSlaRules.slice(0, 25).map((rule, index) => (
+                    <tr key={index} className={Number(rule.id) === Number(selectedSlaRuleId) ? "realtime-highlight" : ""}>
+                      <td>{String(rule.name ?? "-")}</td>
+                      <td>{String(rule.appliesPriority ?? "all")}</td>
+                      <td>{String(rule.appliesDepartment ?? "all")}</td>
+                      <td>{String(rule.breachAfterHours ?? "-")}</td>
+                      <td>{String(rule.escalationChannel ?? "-")}</td>
+                      <td>{String(rule.escalationRecipient ?? "-")}</td>
+                      <td>{String(rule.enabled ? "yes" : "no")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="admin-table-wrap">
+              <h4>Escalation Feed</h4>
+              <table>
+                <thead>
+                  <tr>
+                    <th>When</th>
+                    <th>Work Order</th>
+                    <th>Type</th>
+                    <th>Channel</th>
+                    <th>Recipient</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {workOrderEscalations.slice(0, 30).map((item, index) => (
+                    <tr key={index}>
+                      <td>{String(item.createdAt ?? "-")}</td>
+                      <td>{String(item.workOrderCode ?? "-")}</td>
+                      <td>{String(item.escalationType ?? "-")}</td>
+                      <td>{String(item.channel ?? "-")}</td>
+                      <td>{String(item.recipient ?? "-")}</td>
+                      <td>{String(item.status ?? "-")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="admin-table-wrap">
+              <h4>Work Order Evidence Files</h4>
+              <table>
+                <thead>
+                  <tr>
+                    <th>When</th>
+                    <th>File</th>
+                    <th>Type</th>
+                    <th>Size</th>
+                    <th>Notes</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {workOrderAttachments.slice(0, 40).map((item, index) => (
+                    <tr key={index}>
+                      <td>{String(item.createdAt ?? "-")}</td>
+                      <td>{String(item.fileName ?? "-")}</td>
+                      <td>{String(item.mimeType ?? "-")}</td>
+                      <td>{String(item.fileSizeBytes ?? "-")}</td>
+                      <td>{String(item.notes ?? "-")}</td>
+                      <td>
+                        <button type="button" onClick={() => void onDownloadWorkOrderAttachment(Number(item.id), String(item.fileName ?? "evidence.bin"))}>
+                          Download
+                        </button>
                       </td>
                     </tr>
                   ))}

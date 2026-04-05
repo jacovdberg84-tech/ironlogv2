@@ -175,6 +175,151 @@ New capabilities delivered:
    - **Enterprise** section now includes synthetic generation, site/access management, cross-site heat, trends, and artifact actions
    - full **RBAC Admin Console** is only rendered in the `Admin` section for authorized users
 
+### Phase 8 Expansion
+
+New capabilities delivered:
+
+- Digital work order lifecycle:
+   - create, assign, progress, request approval, approve, and close work orders
+   - work order event timeline for auditability
+- Shift command board:
+   - backlog by status, overdue jobs, blocked jobs, pending approvals, and assignee load
+- Cost and downtime attribution:
+   - machine-level and department-level rollups over configurable time windows
+- Supervisor approval workflow:
+   - high-risk orders can move through `pending_approval` and `approved` before closure
+- Role scorecards:
+   - operator/supervisor/executive scorecard cards generated from site execution data
+
+New API endpoints:
+
+- Work order register:
+   - `GET /api/work-orders?siteCode=SITE-A&status=open&limit=80`
+   - `POST /api/work-orders`
+   - `PATCH /api/work-orders/:id`
+   - `GET /api/work-orders/:id/events`
+- Approval and closeout:
+   - `POST /api/work-orders/:id/request-approval`
+   - `POST /api/work-orders/:id/approve`
+   - `POST /api/work-orders/:id/close`
+- Command and analytics:
+   - `GET /api/work-orders/board/shift?siteCode=SITE-A`
+   - `GET /api/work-orders/attribution/cost-downtime?siteCode=SITE-A&hours=168`
+   - `GET /api/work-orders/scorecard/role?siteCode=SITE-A&days=30`
+
+The web **Enterprise Scale Lab** now includes an **Execution Control Loop** panel with digital work order forms, supervisor actions, shift board tables, and live attribution views.
+
+### Phase 9 Expansion
+
+New capabilities delivered:
+
+- Auto SLA breach alerts and escalations:
+   - configurable SLA rules by site, priority, and department
+   - scheduler-driven SLA evaluation and manual trigger endpoint
+   - escalation events persisted with delivery status and escalation payload
+   - Teams/WhatsApp retry queue with capped exponential backoff
+- Evidence and photo attachment flow:
+   - upload base64 attachments to work orders with metadata and notes
+   - MIME hardening (jpeg/png/webp/pdf/txt/xlsx) and image pre-upload preview in web UI
+   - attachment table plus secure download endpoint
+- Executive shift PDF report:
+   - generates a downloadable PDF from shift board backlog, scorecard, and attribution snapshots
+   - report is stored as an export artifact and can be downloaded via secured route
+   - scheduled dispatch to executive distribution list via email
+
+New API endpoints:
+
+- SLA rules and escalation run:
+   - `GET /api/work-orders/sla-rules?siteCode=SITE-A`
+   - `POST /api/work-orders/sla-rules`
+   - `PATCH /api/work-orders/sla-rules/:id`
+   - `POST /api/work-orders/sla-evaluate/run`
+   - `GET /api/work-orders/escalations?siteCode=SITE-A&limit=100`
+   - `POST /api/work-orders/escalations/retry-run`
+- Evidence attachments:
+   - `POST /api/work-orders/:id/attachments`
+   - `GET /api/work-orders/:id/attachments`
+   - `GET /api/work-orders/:id/attachments/:attachmentId/download`
+- Executive PDF report:
+   - `POST /api/work-orders/reports/executive/pdf`
+   - `POST /api/work-orders/reports/executive/pdf/dispatch`
+   - `GET /api/work-orders/reports/executive/pdf/:id/download`
+
+Scheduler config:
+
+- `WORK_ORDER_SLA_CRON=*/20 * * * *`
+   - set to `off` to disable automatic SLA evaluations
+- `WORK_ORDER_ESCALATION_RETRY_CRON=*/5 * * * *`
+   - set to `off` to disable escalation retry runner
+- `EXECUTIVE_SHIFT_REPORT_CRON=0 5 * * *`
+   - set to `off` to disable scheduled executive report dispatch
+- `EXECUTIVE_SHIFT_REPORT_DEFAULT_SITE_CODE=SITE-A`
+- `EXECUTIVE_SHIFT_REPORT_RECIPIENTS=gm@ironlog.local,ops.manager@ironlog.local`
+
+### Phase 10 Expansion
+
+New capabilities delivered:
+
+- Asana-style workflow board:
+   - site-wide board grouped into workflow lanes (`open`, `assigned`, `in_progress`, `blocked`, `pending_approval`, `approved`, `closed`)
+   - lane cards include live counts and latest work-order snapshots for operations triage
+- Work-order checklist collaboration:
+   - add execution checklist items with optional assignee and due date
+   - mark checklist items complete/incomplete for structured closeout discipline
+- Work-order comments stream:
+   - append operator/supervisor comments directly on each order
+   - query recent comment history for shift handover context
+- Cross-work-order dependencies:
+   - link blocked orders to upstream prerequisite work orders
+   - remove dependencies when prerequisite tasks are resolved
+
+New API endpoints:
+
+- Workflow board:
+   - `GET /api/work-orders/workflow/board?siteCode=SITE-A&limit=200`
+- Checklist:
+   - `GET /api/work-orders/:id/checklist`
+   - `POST /api/work-orders/:id/checklist`
+   - `PATCH /api/work-orders/:id/checklist/:itemId`
+- Comments:
+   - `GET /api/work-orders/:id/comments?limit=100`
+   - `POST /api/work-orders/:id/comments`
+- Dependencies:
+   - `GET /api/work-orders/:id/dependencies`
+   - `POST /api/work-orders/:id/dependencies`
+   - `DELETE /api/work-orders/:id/dependencies/:dependsOnId`
+
+The web **Enterprise Scale Lab** now includes an **Asana-Style Workflow** panel with board lanes, per-order checklist controls, collaboration comments, and dependency management actions.
+
+Sample request bodies:
+
+- `POST /api/work-orders/:id/checklist`
+```json
+{
+   "title": "Verify lockout-tagout before repair",
+   "assigneeName": "Operator B",
+   "dueAt": "2026-04-06T08:00:00Z"
+}
+```
+- `PATCH /api/work-orders/:id/checklist/:itemId`
+```json
+{
+   "status": "done"
+}
+```
+- `POST /api/work-orders/:id/comments`
+```json
+{
+   "message": "Dependency created, waiting on parent completion."
+}
+```
+- `POST /api/work-orders/:id/dependencies`
+```json
+{
+   "dependsOnWorkOrderId": 123
+}
+```
+
 ## Request Logging and Correlation IDs
 
 - Every API request now gets a correlation ID via `x-correlation-id`
