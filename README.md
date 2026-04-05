@@ -1,6 +1,6 @@
-# IRONLOG v2 - Mining ERP Platform
+﻿# IRONLOG v2 - Mining ERP Platform
 
-[![CI Smoke](https://github.com/YOUR_ORG/YOUR_REPO/actions/workflows/ci-smoke.yml/badge.svg?branch=main)](https://github.com/YOUR_ORG/YOUR_REPO/actions/workflows/ci-smoke.yml)
+[![CI Smoke](https://github.com/jacovdberg84-tech/ironlogv2/actions/workflows/ci-smoke.yml/badge.svg?branch=main)](https://github.com/jacovdberg84-tech/ironlogv2/actions/workflows/ci-smoke.yml)
 
 IRONLOG is a full-site ERP platform designed for mining operations with integrated modules for:
 
@@ -552,7 +552,7 @@ Repository guardrail assets now included:
 
 To complete protection in GitHub UI:
 
-1. Enable branch protection on `main` and require `CI Smoke / smoke`.
+1. Enable branch protection on `main` and require `CI Smoke / Build`, `CI Smoke / Startup Smoke`, and `CI Smoke / Workflow Smoke`.
 2. Create GitHub environments `staging` and `production` with required reviewers.
 3. Add environment secrets `DEPLOY_WEBHOOK_URL` and `DEPLOY_WEBHOOK_TOKEN`.
 
@@ -564,6 +564,3 @@ To complete protection in GitHub UI:
 4. Advanced analytics: MTBF/MTTR trends, predictive failures, cost anomalies
 5. RBAC, audit logging, and compliance hardening
 6. Production deployment automation to Hetzner + Cloudflare + Tailscale admin plane
-#   i r o n l o g v 2 
- 
- 

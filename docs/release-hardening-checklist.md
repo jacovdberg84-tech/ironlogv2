@@ -5,7 +5,9 @@
 1. Protect `main`
 2. Require pull request review before merge
 3. Require status checks to pass:
-   - `CI Smoke / smoke`
+   - `CI Smoke / Build`
+   - `CI Smoke / Startup Smoke`
+   - `CI Smoke / Workflow Smoke`
 4. Block force pushes and branch deletion
 
 ## GitHub Environments

@@ -7,7 +7,219 @@ on:
   pull_request:
 
 jobs:
-  smoke:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ironlog
+          POSTGRES_PASSWORD: ironlog
+          POSTGRES_DB: ironlog
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ironlog -d ironlog"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create CI environment file
+        run: |
+          cat > .env << 'EOF'
+          NODE_ENV=development
+          PORT=4000
+          DATABASE_URL=postgresql://ironlog:ironlog@localhost:5432/ironlog
+          REDIS_URL=redis://localhost:6379
+          OPENAI_API_KEY=ci_dummy_key
+          JWT_SECRET=ci_super_long_secret_for_workflow_runs_1234567890
+          JWT_EXPIRES_IN=8h
+          JWT_REFRESH_EXPIRES_IN_DAYS=14
+          LOGIN_MAX_ATTEMPTS=5
+          LOGIN_LOCKOUT_MINUTES=15
+          LOGIN_RATE_LIMIT_WINDOW_MS=60000
+          LOGIN_RATE_LIMIT_MAX=20
+          WEEKLY_REPORT_CRON=off
+          WEEKLY_REPORT_RECIPIENT=gm@ironlog.local
+          SMTP_HOST=
+          SMTP_PORT=587
+          SMTP_SECURE=false
+          SMTP_USER=
+          SMTP_PASSWORD=
+          SMTP_FROM=IRONLOG <mailer@ironlog.local>
+          SYNTHETIC_LOAD_CRON=off
+          SYNTHETIC_LOAD_DEFAULT_SITE_CODE=SITE-A
+          SYNTHETIC_LOAD_DEFAULT_DAYS=7
+          SYNTHETIC_LOAD_DEFAULT_MACHINES=EQ-1001,EQ-1002,EQ-1007,EQ-1010
+          SYNTHETIC_LOAD_DEFAULT_EVENTS_PER_DAY_PER_MACHINE=3
+          SYNTHETIC_LOAD_DEFAULT_INCLUDE_CRITICAL_SPIKE=true
+          WORK_ORDER_SLA_CRON=off
+          WORK_ORDER_ESCALATION_RETRY_CRON=off
+          EXECUTIVE_SHIFT_REPORT_CRON=off
+          EXECUTIVE_SHIFT_REPORT_DEFAULT_SITE_CODE=SITE-A
+          EXECUTIVE_SHIFT_REPORT_RECIPIENTS=gm@ironlog.local,ops.manager@ironlog.local
+          ADMIN_EMAIL=admin@ironlog.local
+          ADMIN_NAME=System Admin
+          ADMIN_PASSWORD=ChangeMe123!
+          VITE_API_BASE_URL=http://localhost:4000/api
+          EOF
+
+      - name: Migrate and seed database
+        run: |
+          npm --workspace apps/api run db:migrate
+          npm --workspace apps/api run db:seed
+
+      - name: Build API and web
+        run: |
+          npm --workspace apps/api run build
+          npm --workspace apps/web run build
+
+  startup_smoke:
+    name: Startup Smoke
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ironlog
+          POSTGRES_PASSWORD: ironlog
+          POSTGRES_DB: ironlog
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ironlog -d ironlog"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create CI environment file
+        run: |
+          cat > .env << 'EOF'
+          NODE_ENV=development
+          PORT=4000
+          DATABASE_URL=postgresql://ironlog:ironlog@localhost:5432/ironlog
+          REDIS_URL=redis://localhost:6379
+          OPENAI_API_KEY=ci_dummy_key
+          JWT_SECRET=ci_super_long_secret_for_workflow_runs_1234567890
+          JWT_EXPIRES_IN=8h
+          JWT_REFRESH_EXPIRES_IN_DAYS=14
+          LOGIN_MAX_ATTEMPTS=5
+          LOGIN_LOCKOUT_MINUTES=15
+          LOGIN_RATE_LIMIT_WINDOW_MS=60000
+          LOGIN_RATE_LIMIT_MAX=20
+          WEEKLY_REPORT_CRON=off
+          WEEKLY_REPORT_RECIPIENT=gm@ironlog.local
+          SMTP_HOST=
+          SMTP_PORT=587
+          SMTP_SECURE=false
+          SMTP_USER=
+          SMTP_PASSWORD=
+          SMTP_FROM=IRONLOG <mailer@ironlog.local>
+          SYNTHETIC_LOAD_CRON=off
+          SYNTHETIC_LOAD_DEFAULT_SITE_CODE=SITE-A
+          SYNTHETIC_LOAD_DEFAULT_DAYS=7
+          SYNTHETIC_LOAD_DEFAULT_MACHINES=EQ-1001,EQ-1002,EQ-1007,EQ-1010
+          SYNTHETIC_LOAD_DEFAULT_EVENTS_PER_DAY_PER_MACHINE=3
+          SYNTHETIC_LOAD_DEFAULT_INCLUDE_CRITICAL_SPIKE=true
+          WORK_ORDER_SLA_CRON=off
+          WORK_ORDER_ESCALATION_RETRY_CRON=off
+          EXECUTIVE_SHIFT_REPORT_CRON=off
+          EXECUTIVE_SHIFT_REPORT_DEFAULT_SITE_CODE=SITE-A
+          EXECUTIVE_SHIFT_REPORT_RECIPIENTS=gm@ironlog.local,ops.manager@ironlog.local
+          ADMIN_EMAIL=admin@ironlog.local
+          ADMIN_NAME=System Admin
+          ADMIN_PASSWORD=ChangeMe123!
+          VITE_API_BASE_URL=http://localhost:4000/api
+          EOF
+
+      - name: Migrate and seed database
+        run: |
+          npm --workspace apps/api run db:migrate
+          npm --workspace apps/api run db:seed
+
+      - name: Start API server
+        run: |
+          npm --workspace apps/api run dev > api.log 2>&1 &
+          echo $! > api.pid
+
+      - name: Wait for health
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://localhost:4000/health/startup > /dev/null; then
+              echo "API is healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "API did not become healthy in time"
+          exit 1
+
+      - name: Run startup smoke test
+        run: pwsh -ExecutionPolicy Bypass -File ./scripts/smoke-test.ps1
+
+      - name: Upload API log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: startup-smoke-api-log
+          path: api.log
+
+      - name: Stop API server
+        if: always()
+        run: |
+          if [ -f api.pid ]; then
+            kill $(cat api.pid) || true
+          fi
+
+  workflow_smoke:
+    name: Workflow Smoke
     runs-on: ubuntu-latest
 
     services:
@@ -114,9 +326,6 @@ jobs:
           echo "API did not become healthy in time"
           exit 1
 
-      - name: Run startup smoke test
-        run: pwsh -ExecutionPolicy Bypass -File ./scripts/smoke-test.ps1
-
       - name: Run workflow smoke test
         run: pwsh -ExecutionPolicy Bypass -File ./scripts/workflow-smoke-test.ps1
 
@@ -124,7 +333,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: api-log
+          name: workflow-smoke-api-log
           path: api.log
 
       - name: Stop API server
