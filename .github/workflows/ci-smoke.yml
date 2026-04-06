@@ -52,7 +52,7 @@ jobs:
         run: |
           cat > .env << 'EOF'
           NODE_ENV=development
-          PORT=4000
+          PORT=4100
           DATABASE_URL=postgresql://ironlog:ironlog@localhost:5432/ironlog
           REDIS_URL=redis://localhost:6379
           OPENAI_API_KEY=ci_dummy_key
@@ -85,7 +85,7 @@ jobs:
           ADMIN_EMAIL=admin@ironlog.local
           ADMIN_NAME=System Admin
           ADMIN_PASSWORD=ChangeMe123!
-          VITE_API_BASE_URL=http://localhost:4000/api
+          VITE_API_BASE_URL=http://localhost:4100/api
           EOF
 
       - name: Migrate and seed database
@@ -204,7 +204,7 @@ jobs:
       - name: Wait for health
         run: |
           for i in {1..60}; do
-            if curl -fsS http://localhost:4000/health/startup > /dev/null; then
+            if curl -fsS http://localhost:4100/health/startup > /dev/null; then
               echo "API is healthy"
               exit 0
             fi
@@ -218,7 +218,7 @@ jobs:
           exit 1
 
       - name: Run startup smoke test
-        run: pwsh -ExecutionPolicy Bypass -File ./scripts/smoke-test.ps1
+        run: pwsh -ExecutionPolicy Bypass -File ./scripts/smoke-test.ps1 -ApiBase http://localhost:4100
 
       - name: Upload API log on failure
         if: failure()
@@ -279,7 +279,7 @@ jobs:
         run: |
           cat > .env << 'EOF'
           NODE_ENV=development
-          PORT=4000
+          PORT=4100
           DATABASE_URL=postgresql://ironlog:ironlog@localhost:5432/ironlog
           REDIS_URL=redis://localhost:6379
           OPENAI_API_KEY=ci_dummy_key
@@ -312,7 +312,7 @@ jobs:
           ADMIN_EMAIL=admin@ironlog.local
           ADMIN_NAME=System Admin
           ADMIN_PASSWORD=ChangeMe123!
-          VITE_API_BASE_URL=http://localhost:4000/api
+          VITE_API_BASE_URL=http://localhost:4100/api
           EOF
 
       - name: Migrate and seed database
@@ -342,7 +342,7 @@ jobs:
       - name: Wait for health
         run: |
           for i in {1..60}; do
-            if curl -fsS http://localhost:4000/health/startup > /dev/null; then
+            if curl -fsS http://localhost:4100/health/startup > /dev/null; then
               echo "API is healthy"
               exit 0
             fi
@@ -356,7 +356,7 @@ jobs:
           exit 1
 
       - name: Run workflow smoke test
-        run: pwsh -ExecutionPolicy Bypass -File ./scripts/workflow-smoke-test.ps1
+        run: pwsh -ExecutionPolicy Bypass -File ./scripts/workflow-smoke-test.ps1 -ApiBase http://localhost:4100
 
       - name: Upload API log on failure
         if: failure()

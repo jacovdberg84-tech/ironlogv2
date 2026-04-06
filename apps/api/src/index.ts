@@ -151,7 +151,15 @@ realtimeHub.on("investigation_case_updated", (payload) => {
   });
 });
 
+httpServer.on("error", (error) => {
+  console.error("HTTP server failed", error);
+});
+
 httpServer.listen(config.port, () => {
-  startSchedulers();
+  try {
+    startSchedulers();
+  } catch (error) {
+    console.error("Scheduler initialization failed", error);
+  }
   console.log(`IRONLOG API running on port ${config.port}`);
 });
