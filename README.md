@@ -538,6 +538,30 @@ Example:
 
 - `powershell -ExecutionPolicy Bypass -File ./scripts/workflow-smoke-test.ps1 -ApiBase http://localhost:4000 -SiteCode SITE-A`
 
+## Post-Deploy Smoke Script
+
+Run all critical post-deploy checks from one command:
+
+- Command: `npm run smoke:postdeploy`
+- Default target: `https://deploy.ironloggroup.com`
+- Includes:
+    - startup smoke checks
+    - workflow smoke checks
+    - webhook reachability check
+    - TLS certificate inspection (for HTTPS targets)
+    - optional backup freshness check when `-BackupPath` is provided
+
+Examples:
+
+- Full post-deploy run against default target:
+   - `npm run smoke:postdeploy`
+- Skip workflow checks:
+   - `npm run smoke:postdeploy -- -SkipWorkflow`
+- Include backup freshness check (24h max by default):
+   - `npm run smoke:postdeploy -- -BackupPath "c:\\IRONLOG v2\\backups"`
+- Run against local API and skip TLS:
+   - `npm run smoke:postdeploy -- -ApiBase http://localhost:4000 -SkipTls`
+
 ## Production Guardrails
 
 Repository guardrail assets now included:
