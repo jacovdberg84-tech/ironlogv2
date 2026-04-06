@@ -13,6 +13,7 @@
     "backup:set-time": "powershell -ExecutionPolicy Bypass -File ./scripts/set-backup-time.ps1",
     "restore:db": "powershell -ExecutionPolicy Bypass -File ./scripts/db-restore.ps1",
     "smoke:test": "powershell -ExecutionPolicy Bypass -File ./scripts/smoke-test.ps1",
-    "smoke:workflow": "powershell -ExecutionPolicy Bypass -File ./scripts/workflow-smoke-test.ps1"
+    "smoke:workflow": "powershell -ExecutionPolicy Bypass -File ./scripts/workflow-smoke-test.ps1",
+    "smoke:postdeploy": "powershell -ExecutionPolicy Bypass -File ./scripts/post-deploy-smoke.ps1"
   }
 }
