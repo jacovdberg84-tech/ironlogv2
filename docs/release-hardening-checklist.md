@@ -19,6 +19,7 @@
 3. Add environment secrets:
    - `DEPLOY_WEBHOOK_URL`
    - `DEPLOY_WEBHOOK_TOKEN`
+4. Ensure `DEPLOY_WEBHOOK_URL` is a full URL, for example `https://deploy.example.com/webhook`.
 
 ## Repository Secrets
 

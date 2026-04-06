@@ -83,8 +83,28 @@ jobs:
             exit 0
           fi
 
-          curl -fsS -X POST "$DEPLOY_WEBHOOK_URL" \
-            -H "Authorization: Bearer $DEPLOY_WEBHOOK_TOKEN" \
+          if [[ ! "$DEPLOY_WEBHOOK_URL" =~ ^https?:// ]]; then
+            echo "DEPLOY_WEBHOOK_URL must start with http:// or https://"
+            echo "Current value appears invalid."
+            exit 1
+          fi
+
+          webhook_host=$(echo "$DEPLOY_WEBHOOK_URL" | sed -E 's#https?://([^/]+).*#\1#')
+          if ! getent hosts "$webhook_host" >/dev/null 2>&1; then
+            echo "Could not resolve DEPLOY_WEBHOOK_URL host: $webhook_host"
+            echo "This commonly causes curl exit code 6. Check the secret value and DNS reachability."
+            exit 1
+          fi
+
+          auth_header=()
+          if [ -n "$DEPLOY_WEBHOOK_TOKEN" ]; then
+            auth_header=(-H "Authorization: Bearer $DEPLOY_WEBHOOK_TOKEN")
+          else
+            echo "DEPLOY_WEBHOOK_TOKEN is empty; proceeding without Authorization header."
+          fi
+
+          curl --retry 3 --retry-all-errors --connect-timeout 10 --max-time 60 -fsS -X POST "$DEPLOY_WEBHOOK_URL" \
+            "${auth_header[@]}" \
             -H "Content-Type: application/json" \
             -d '{"repository":"'"${{ github.repository }}"'","sha":"'"${{ github.sha }}"'","ref":"'"${{ github.event.inputs.ref }}"'","environment":"'"${{ github.event.inputs.environment }}"'"}'
 
