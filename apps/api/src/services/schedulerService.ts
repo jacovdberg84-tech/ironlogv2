@@ -17,14 +17,16 @@ export function startSchedulers() {
 
   schedulerStarted = true;
 
-  cron.schedule(config.weeklyReportCron, async () => {
-    try {
-      await runWeeklyReportJob("scheduler");
-      console.log("Weekly GM report job completed");
-    } catch (error) {
-      console.error("Weekly GM report job failed", error);
-    }
-  });
+  if (config.weeklyReportCron && config.weeklyReportCron.toLowerCase() !== "off") {
+    cron.schedule(config.weeklyReportCron, async () => {
+      try {
+        await runWeeklyReportJob("scheduler");
+        console.log("Weekly GM report job completed");
+      } catch (error) {
+        console.error("Weekly GM report job failed", error);
+      }
+    });
+  }
 
   if (config.syntheticLoadCron && config.syntheticLoadCron.toLowerCase() !== "off") {
     cron.schedule(config.syntheticLoadCron, async () => {

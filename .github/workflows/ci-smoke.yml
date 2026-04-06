@@ -52,7 +52,7 @@ jobs:
         run: |
           cat > .env << 'EOF'
           NODE_ENV=development
-          PORT=4000
+          PORT=4100
           DATABASE_URL=postgresql://ironlog:ironlog@localhost:5432/ironlog
           REDIS_URL=redis://localhost:6379
           OPENAI_API_KEY=ci_dummy_key
@@ -85,7 +85,7 @@ jobs:
           ADMIN_EMAIL=admin@ironlog.local
           ADMIN_NAME=System Admin
           ADMIN_PASSWORD=ChangeMe123!
-          VITE_API_BASE_URL=http://localhost:4000/api
+          VITE_API_BASE_URL=http://localhost:4100/api
           EOF
 
       - name: Migrate and seed database
@@ -143,7 +143,7 @@ jobs:
         run: |
           cat > .env << 'EOF'
           NODE_ENV=development
-          PORT=4000
+          PORT=4100
           DATABASE_URL=postgresql://ironlog:ironlog@localhost:5432/ironlog
           REDIS_URL=redis://localhost:6379
           OPENAI_API_KEY=ci_dummy_key
@@ -176,7 +176,7 @@ jobs:
           ADMIN_EMAIL=admin@ironlog.local
           ADMIN_NAME=System Admin
           ADMIN_PASSWORD=ChangeMe123!
-          VITE_API_BASE_URL=http://localhost:4000/api
+          VITE_API_BASE_URL=http://localhost:4100/api
           EOF
 
       - name: Migrate and seed database
@@ -184,25 +184,41 @@ jobs:
           npm --workspace apps/api run db:migrate
           npm --workspace apps/api run db:seed
 
+      - name: Build API
+        run: npm --workspace apps/api run build
+
       - name: Start API server
         run: |
-          npm --workspace apps/api run dev > api.log 2>&1 &
+          PORT=4100 node apps/api/dist/index.js > api.log 2>&1 &
           echo $! > api.pid
+          sleep 2
+          if ! kill -0 $(cat api.pid) >/dev/null 2>&1; then
+            echo "API process exited immediately after start"
+            if [ -f api.log ]; then
+              echo "----- api.log tail -----"
+              tail -n 120 api.log || true
+            fi
+            exit 1
+          fi
 
       - name: Wait for health
         run: |
           for i in {1..60}; do
-            if curl -fsS http://localhost:4000/health/startup > /dev/null; then
+            if curl -fsS http://localhost:4100/health/startup > /dev/null; then
               echo "API is healthy"
               exit 0
             fi
             sleep 2
           done
           echo "API did not become healthy in time"
+          if [ -f api.log ]; then
+            echo "----- api.log tail -----"
+            tail -n 120 api.log || true
+          fi
           exit 1
 
       - name: Run startup smoke test
-        run: pwsh -ExecutionPolicy Bypass -File ./scripts/smoke-test.ps1
+        run: pwsh -ExecutionPolicy Bypass -File ./scripts/smoke-test.ps1 -ApiBase http://localhost:4100
 
       - name: Upload API log on failure
         if: failure()
@@ -263,7 +279,7 @@ jobs:
         run: |
           cat > .env << 'EOF'
           NODE_ENV=development
-          PORT=4000
+          PORT=4100
           DATABASE_URL=postgresql://ironlog:ironlog@localhost:5432/ironlog
           REDIS_URL=redis://localhost:6379
           OPENAI_API_KEY=ci_dummy_key
@@ -296,7 +312,7 @@ jobs:
           ADMIN_EMAIL=admin@ironlog.local
           ADMIN_NAME=System Admin
           ADMIN_PASSWORD=ChangeMe123!
-          VITE_API_BASE_URL=http://localhost:4000/api
+          VITE_API_BASE_URL=http://localhost:4100/api
           EOF
 
       - name: Migrate and seed database
@@ -311,23 +327,36 @@ jobs:
 
       - name: Start API server
         run: |
-          npm --workspace apps/api run dev > api.log 2>&1 &
+          PORT=4100 node apps/api/dist/index.js > api.log 2>&1 &
           echo $! > api.pid
+          sleep 2
+          if ! kill -0 $(cat api.pid) >/dev/null 2>&1; then
+            echo "API process exited immediately after start"
+            if [ -f api.log ]; then
+              echo "----- api.log tail -----"
+              tail -n 120 api.log || true
+            fi
+            exit 1
+          fi
 
       - name: Wait for health
         run: |
           for i in {1..60}; do
-            if curl -fsS http://localhost:4000/health/startup > /dev/null; then
+            if curl -fsS http://localhost:4100/health/startup > /dev/null; then
               echo "API is healthy"
               exit 0
             fi
             sleep 2
           done
           echo "API did not become healthy in time"
+          if [ -f api.log ]; then
+            echo "----- api.log tail -----"
+            tail -n 120 api.log || true
+          fi
           exit 1
 
       - name: Run workflow smoke test
-        run: pwsh -ExecutionPolicy Bypass -File ./scripts/workflow-smoke-test.ps1
+        run: pwsh -ExecutionPolicy Bypass -File ./scripts/workflow-smoke-test.ps1 -ApiBase http://localhost:4100
 
       - name: Upload API log on failure
         if: failure()
