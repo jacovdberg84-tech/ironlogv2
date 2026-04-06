@@ -28,6 +28,7 @@ export const config = {
   smtpUser: process.env.SMTP_USER ?? "",
   smtpPassword: process.env.SMTP_PASSWORD ?? "",
   smtpFrom: process.env.SMTP_FROM ?? "",
+  notificationTimeoutMs: Number(process.env.NOTIFICATION_TIMEOUT_MS ?? 5000),
   syntheticLoadCron: process.env.SYNTHETIC_LOAD_CRON ?? "",
   syntheticLoadDefaultSiteCode: process.env.SYNTHETIC_LOAD_DEFAULT_SITE_CODE ?? "SITE-A",
   syntheticLoadDefaultDays: Number(process.env.SYNTHETIC_LOAD_DEFAULT_DAYS ?? 7),

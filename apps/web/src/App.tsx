@@ -85,6 +85,9 @@ import {
   updateWorkOrderSlaRule,
   updateFaultRule
 } from "./api";
+import { SiteRouteControlPanel } from "./components/SiteRouteControlPanel";
+import { TopKpiSummaryGrid } from "./components/TopKpiSummaryGrid";
+import type { DashboardSection, RouteSection } from "./components/dashboardTypes";
 
 type ModuleCard = {
   title: string;
@@ -111,8 +114,6 @@ type LiveToast = {
   detail: string;
   createdAt: number;
 };
-
-type DashboardSection = "overview" | "ironmind" | "departments" | "enterprise" | "admin";
 
 const OFFLINE_QUEUE_KEY = "ironlog.operatorEntryQueue";
 
@@ -1725,6 +1726,14 @@ export function App() {
     admin: true
   };
   const siteRoleLabel = String(siteContext?.role ?? "unknown");
+  const routeSections: Array<{ key: DashboardSection; label: string; enabled: boolean }> = [
+    { key: "overview", label: "Overview", enabled: true },
+    { key: "ironmind", label: "Ironmind", enabled: Boolean(allowedSections.ironmind) },
+    { key: "departments", label: "Departments", enabled: Boolean(allowedSections.departments) },
+    { key: "enterprise", label: "Enterprise", enabled: Boolean(allowedSections.enterprise) },
+    { key: "admin", label: "Admin", enabled: Boolean(allowedSections.admin) }
+  ];
+  const typedRouteSections: RouteSection[] = routeSections;
 
   return (
     <main className="page">
@@ -1773,39 +1782,23 @@ export function App() {
 
       {!isAuthenticated ? null : (
         <>
-          <section className="panel">
-            <h3>Site Route Control</h3>
-            <p className="admin-note">Site: {enterpriseSiteCode} | role: {siteRoleLabel}</p>
-            <div className="health-link-row">
-              <button type="button" onClick={() => navigateToSection("overview")}>Overview</button>
-              <button type="button" onClick={() => navigateToSection("ironmind")} disabled={!Boolean(allowedSections.ironmind)}>Ironmind</button>
-              <button type="button" onClick={() => navigateToSection("departments")} disabled={!Boolean(allowedSections.departments)}>Departments</button>
-              <button type="button" onClick={() => navigateToSection("enterprise")} disabled={!Boolean(allowedSections.enterprise)}>Enterprise</button>
-              <button type="button" onClick={() => navigateToSection("admin")} disabled={!Boolean(allowedSections.admin)}>Admin</button>
-            </div>
-          </section>
+          <SiteRouteControlPanel
+            enterpriseSiteCode={enterpriseSiteCode}
+            siteRoleLabel={siteRoleLabel}
+            activeSection={activeSection}
+            routeSections={typedRouteSections}
+            onNavigate={navigateToSection}
+          />
 
-          <section className="kpi-grid">
-            <article className="kpi-card">
-              <p>MTBF</p>
-              <h2>{plant?.maintenance.mtbf ?? "-"} hrs</h2>
-            </article>
-            <article className="kpi-card">
-              <p>MTTR</p>
-              <h2>{plant?.maintenance.mttr ?? "-"} hrs</h2>
-            </article>
-            <article className="kpi-card">
-              <p>Equipment Utilization</p>
-              <h2>{utilizationAvg}%</h2>
-            </article>
-            <article className="kpi-card">
-              <p>Tonnes Hauled</p>
-              <h2>{(operations?.tonnesHauled as number | undefined) ?? "-"}</h2>
-            </article>
-          </section>
+          <TopKpiSummaryGrid
+            mtbf={plant?.maintenance.mtbf ?? "-"}
+            mttr={plant?.maintenance.mttr ?? "-"}
+            utilizationAvg={utilizationAvg}
+            tonnesHauled={(operations?.tonnesHauled as number | undefined) ?? "-"}
+          />
 
-          <section className="panel">
-            <h3>Plant Availability and Fuel</h3>
+          <section className="panel" aria-labelledby="plant-availability-heading">
+            <h3 id="plant-availability-heading">Plant Availability and Fuel</h3>
             <div className="table-wrap">
               <table>
                 <thead>
@@ -1831,8 +1824,8 @@ export function App() {
           </section>
 
           {activeSection === "overview" && (
-          <section className="panel operator-panel">
-            <h3>Mobile Operator Capture</h3>
+          <section className="panel operator-panel" id="overview-section-panel" aria-labelledby="overview-heading" role="region">
+            <h3 id="overview-heading">Mobile Operator Capture</h3>
             <p className="admin-note">Fast field entry for hours, shift, and fuel per machine.</p>
             <p className="admin-note">{operatorStatus}</p>
             <div className="operator-sync-row">
@@ -1866,8 +1859,8 @@ export function App() {
           )}
 
           {activeSection === "ironmind" && Boolean(allowedSections.ironmind) && (
-          <section className="panel">
-            <h3>Ironmind Tactical Intel</h3>
+          <section className="panel" id="ironmind-section-panel" aria-labelledby="ironmind-heading" role="region">
+            <h3 id="ironmind-heading">Ironmind Tactical Intel</h3>
             <p className="admin-note">Pattern intelligence for repeat failures, channel reliability, and scenario simulation.</p>
             <p className="admin-note">{ironmindStatus}</p>
             <div className="alert-controls">
@@ -2235,8 +2228,8 @@ export function App() {
           )}
 
           {activeSection === "departments" && Boolean(allowedSections.departments) && (
-          <section className="panel">
-            <h3>All Departments Data Dump</h3>
+          <section className="panel" id="departments-section-panel" aria-labelledby="departments-heading" role="region">
+            <h3 id="departments-heading">All Departments Data Dump</h3>
             <p className="admin-note">Operational payloads for Operations, HSE, HR, Quality, and Logistics.</p>
             <div className="health-link-row">
               <button type="button" onClick={() => void refreshDepartmentDump()}>Refresh Department Dumps</button>
@@ -2377,8 +2370,8 @@ export function App() {
           )}
 
           {activeSection === "enterprise" && Boolean(allowedSections.enterprise) && (
-          <section className="panel">
-            <h3>Enterprise Scale Lab</h3>
+          <section className="panel" id="enterprise-section-panel" aria-labelledby="enterprise-heading" role="region">
+            <h3 id="enterprise-heading">Enterprise Scale Lab</h3>
             <p className="admin-note">Unified site overview plus synthetic data engine to scale-test every department fast.</p>
             <p className="admin-note">{syntheticStatus}</p>
 
@@ -2707,9 +2700,9 @@ export function App() {
                   <button type="button" onClick={() => void onCloseSelectedWorkOrder()}>Close Work Order</button>
                 </form>
 
-                <div className="admin-form">
+                <div className="role-scorecard">
                   <h4>Role Scorecard</h4>
-                  <pre className="audit-json">{JSON.stringify(workOrderScorecard ?? {}, null, 2)}</pre>
+                  <pre>{JSON.stringify(workOrderScorecard ?? {}, null, 2)}</pre>
                 </div>
 
                 <form className="admin-form" onSubmit={onCreateSlaRule}>
@@ -3155,8 +3148,8 @@ export function App() {
           </section>
 
           {activeSection === "admin" && Boolean(allowedSections.admin) && (
-          <section className="panel admin-panel">
-            <h3>RBAC Admin Console</h3>
+          <section className="panel admin-panel" id="admin-section-panel" aria-labelledby="admin-heading" role="region">
+            <h3 id="admin-heading">RBAC Admin Console</h3>
             <p className="admin-note">{rbacStatus}</p>
 
             {!rbac ? (

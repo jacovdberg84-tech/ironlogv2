@@ -3,6 +3,7 @@ param(
   [string]$Email = "admin@ironlog.local",
   [string]$Password = "ChangeMe123!",
   [string]$SiteCode = "SITE-A",
+  [string]$DeployWebhookToken = $env:DEPLOY_WEBHOOK_TOKEN,
   [switch]$SkipWorkflow,
   [switch]$SkipTls,
   [string]$BackupPath,
@@ -26,15 +27,25 @@ function Invoke-SmokeScript {
 }
 
 function Test-WebhookReachability {
-  param([string]$Base)
+  param(
+    [string]$Base,
+    [string]$Token
+  )
 
   $uri = "$Base/webhook"
+  $body = @{ probe = "post-deploy-smoke" } | ConvertTo-Json
+  $headers = @{}
+  if (-not [string]::IsNullOrWhiteSpace($Token)) {
+    $headers.Authorization = "Bearer $Token"
+  }
+
   try {
-    $response = Invoke-WebRequest -Method Head -Uri $uri -TimeoutSec 20
+    $response = Invoke-WebRequest -Method Post -Uri $uri -Headers $headers -ContentType "application/json" -Body $body -TimeoutSec 20
     return [pscustomobject]@{
       url = $uri
       statusCode = [int]$response.StatusCode
       reachable = $true
+      authenticated = -not [string]::IsNullOrWhiteSpace($Token)
     }
   } catch {
     $statusCode = $null
@@ -42,13 +53,22 @@ function Test-WebhookReachability {
       $statusCode = [int]$_.Exception.Response.StatusCode
     }
 
-    # For reachability, treat HTTP auth/method/path responses as online.
-    if ($statusCode -in @(200, 204, 400, 401, 403, 404, 405)) {
+    # Without token, 401/403 still confirms route reachability.
+    # With token, accept only valid execution statuses.
+    $isAuthenticatedProbe = -not [string]::IsNullOrWhiteSpace($Token)
+    $acceptedCodes = if ($isAuthenticatedProbe) { @(200, 202, 409) } else { @(200, 202, 400, 401, 403, 409) }
+
+    if ($statusCode -in $acceptedCodes) {
       return [pscustomobject]@{
         url = $uri
         statusCode = $statusCode
         reachable = $true
+        authenticated = $isAuthenticatedProbe
       }
+    }
+
+    if ($isAuthenticatedProbe -and $statusCode -in @(401, 403)) {
+      throw "Webhook token rejected (HTTP $statusCode). Ensure DEPLOY_WEBHOOK_TOKEN matches /etc/ironlog/deploy-webhook.env on the server and GitHub environment secret DEPLOY_WEBHOOK_TOKEN."
     }
 
     throw "Webhook endpoint check failed for $uri. $($_.Exception.Message)"
@@ -155,7 +175,7 @@ if (-not $SkipWorkflow) {
 }
 
 try {
-  $summary.webhook = Test-WebhookReachability -Base $ApiBase
+  $summary.webhook = Test-WebhookReachability -Base $ApiBase -Token $DeployWebhookToken
 } catch {
   $summary.webhook = [pscustomobject]@{ reachable = $false; message = $_.Exception.Message }
   $failedChecks.Add("webhook")

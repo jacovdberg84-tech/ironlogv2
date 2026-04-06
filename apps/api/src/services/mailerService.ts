@@ -19,6 +19,11 @@ export async function sendMail(args: {
     host: config.smtpHost,
     port: config.smtpPort,
     secure: config.smtpSecure,
+    connectionTimeout: config.notificationTimeoutMs,
+    greetingTimeout: config.notificationTimeoutMs,
+    socketTimeout: config.notificationTimeoutMs,
+    disableFileAccess: true,
+    disableUrlAccess: true,
     auth: {
       user: config.smtpUser,
       pass: config.smtpPassword
