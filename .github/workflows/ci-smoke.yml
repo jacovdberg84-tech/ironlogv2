@@ -189,8 +189,17 @@ jobs:
 
       - name: Start API server
         run: |
-          npm --workspace apps/api run start > api.log 2>&1 &
+          node apps/api/dist/index.js > api.log 2>&1 &
           echo $! > api.pid
+          sleep 2
+          if ! kill -0 $(cat api.pid) >/dev/null 2>&1; then
+            echo "API process exited immediately after start"
+            if [ -f api.log ]; then
+              echo "----- api.log tail -----"
+              tail -n 120 api.log || true
+            fi
+            exit 1
+          fi
 
       - name: Wait for health
         run: |
@@ -318,8 +327,17 @@ jobs:
 
       - name: Start API server
         run: |
-          npm --workspace apps/api run start > api.log 2>&1 &
+          node apps/api/dist/index.js > api.log 2>&1 &
           echo $! > api.pid
+          sleep 2
+          if ! kill -0 $(cat api.pid) >/dev/null 2>&1; then
+            echo "API process exited immediately after start"
+            if [ -f api.log ]; then
+              echo "----- api.log tail -----"
+              tail -n 120 api.log || true
+            fi
+            exit 1
+          fi
 
       - name: Wait for health
         run: |
