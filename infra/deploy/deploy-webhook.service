@@ -1,0 +1,15 @@
+[Unit]
+Description=IRONLOG Deploy Webhook Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/ironlogv2
+EnvironmentFile=/etc/ironlog/deploy-webhook.env
+ExecStart=/usr/bin/node /opt/ironlogv2/scripts/deploy-webhook-server.mjs
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

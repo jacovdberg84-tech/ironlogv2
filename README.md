@@ -573,6 +573,7 @@ Repository guardrail assets now included:
 - Code ownership: `.github/CODEOWNERS`
 - Pull request quality gate: `.github/pull_request_template.md`
 - Operational checklist: `docs/release-hardening-checklist.md`
+- Deploy webhook worker guide: `docs/deploy-webhook-service.md`
 
 To complete protection in GitHub UI:
 
