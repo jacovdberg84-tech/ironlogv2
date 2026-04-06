@@ -184,9 +184,12 @@ jobs:
           npm --workspace apps/api run db:migrate
           npm --workspace apps/api run db:seed
 
+      - name: Build API
+        run: npm --workspace apps/api run build
+
       - name: Start API server
         run: |
-          npm --workspace apps/api run dev > api.log 2>&1 &
+          npm --workspace apps/api run start > api.log 2>&1 &
           echo $! > api.pid
 
       - name: Wait for health
@@ -199,6 +202,10 @@ jobs:
             sleep 2
           done
           echo "API did not become healthy in time"
+          if [ -f api.log ]; then
+            echo "----- api.log tail -----"
+            tail -n 120 api.log || true
+          fi
           exit 1
 
       - name: Run startup smoke test
@@ -311,7 +318,7 @@ jobs:
 
       - name: Start API server
         run: |
-          npm --workspace apps/api run dev > api.log 2>&1 &
+          npm --workspace apps/api run start > api.log 2>&1 &
           echo $! > api.pid
 
       - name: Wait for health
@@ -324,6 +331,10 @@ jobs:
             sleep 2
           done
           echo "API did not become healthy in time"
+          if [ -f api.log ]; then
+            echo "----- api.log tail -----"
+            tail -n 120 api.log || true
+          fi
           exit 1
 
       - name: Run workflow smoke test
